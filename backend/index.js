@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
+const productRoutes = require("./routes/productRoutes");
 
 
 console.log("DB_USER:", process.env.DB_USER);
@@ -16,6 +17,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/auth", authRoutes);
+app.use("/products", productRoutes);
 
 // test route
 app.get("/", (req, res) => {
