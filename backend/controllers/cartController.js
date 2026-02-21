@@ -110,3 +110,27 @@ exports.updateCartItem = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+// Remove Cart Item
+exports.removeCartItem = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+
+    const [rows] = await db.query(
+      "SELECT id FROM cart_items WHERE id = ? AND user_id = ?",
+      [id, userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Cart item not found" });
+    }
+
+    await db.query("DELETE FROM cart_items WHERE id = ?", [id]);
+
+    return res.json({ message: "Item removed from cart ✅" });
+  } catch (err) {
+    console.error("REMOVE CART ERROR:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
