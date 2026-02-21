@@ -78,3 +78,35 @@ exports.addToCart = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+// Update Cart Item
+exports.updateCartItem = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const { quantity } = req.body;
+
+    if (!quantity || quantity < 1) {
+      return res.status(400).json({ message: "Quantity must be at least 1" });
+    }
+
+    const [rows] = await db.query(
+      "SELECT id FROM cart_items WHERE id = ? AND user_id = ?",
+      [id, userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Cart item not found" });
+    }
+
+    await db.query("UPDATE cart_items SET quantity = ? WHERE id = ?", [
+      quantity,
+      id,
+    ]);
+
+    return res.json({ message: "Cart item updated ✅" });
+  } catch (err) {
+    console.error("UPDATE CART ERROR:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
