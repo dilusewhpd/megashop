@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const { v4: uuidv4 } = require("uuid");
 
+// Place Order (Checkout)
 exports.checkout = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -67,6 +68,55 @@ exports.checkout = async (req, res) => {
     });
   } catch (err) {
     console.error("CHECKOUT ERROR:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// Get My Orders
+exports.getMyOrders = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const [rows] = await db.query(
+      `
+      SELECT id, order_number, status, total, created_at
+      FROM orders
+      WHERE user_id = ?
+      ORDER BY created_at DESC
+      `,
+      [userId]
+    );
+
+    return res.json({ orders: rows });
+  } catch (err) {
+    console.error("GET ORDERS ERROR:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// Get Order Details by Order Number
+exports.getOrderByNumber = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { orderNumber } = req.params;
+
+    const [rows] = await db.query(
+      `
+      SELECT id, order_number, status, subtotal, tax, shipping, discount, total,
+             shipping_address, payment_method, created_at
+      FROM orders
+      WHERE user_id = ? AND order_number = ?
+      `,
+      [userId, orderNumber]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    return res.json({ order: rows[0] });
+  } catch (err) {
+    console.error("GET ORDER DETAILS ERROR:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
