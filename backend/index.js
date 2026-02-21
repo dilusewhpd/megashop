@@ -1,7 +1,12 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const authRoutes = require("./routes/authRoutes");
+const authMiddleware = require("./middleware/authMiddleware");
 
-require("dotenv").config();
+
+console.log("DB_USER:", process.env.DB_USER);
+console.log("DB_NAME:", process.env.DB_NAME);
 const db = require("./config/db");
 
 
@@ -10,10 +15,16 @@ const app = express();
 // middlewares
 app.use(cors());
 app.use(express.json());
+app.use("/auth", authRoutes);
 
 // test route
 app.get("/", (req, res) => {
   res.json({ message: "MegaShop Backend is Running 🚀" });
+});
+
+// protected route example
+app.get("/me", authMiddleware, (req, res) => {
+  res.json({ message: "You are authenticated ✅", user: req.user });
 });
 
 // test db connection
