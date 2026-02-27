@@ -10,7 +10,7 @@ export default function App() {
   return (
     <NavigationContainer>
       {token ? (
-        <MainNavigator />
+        <MainNavigator token={token} setToken={setToken} />
       ) : (
         <AuthNavigator setToken={setToken} />
       )}

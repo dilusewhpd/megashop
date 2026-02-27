@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet , Button } from "react-native";
 import { getProductByIdApi } from "../../api/productApi";
+import { addToCartApi } from "../../api/cartApi";
 
-export default function ProductDetailsScreen({ route }) {
+export default function ProductDetailsScreen({ route , token }) {
   const { id } = route.params;
   const [product, setProduct] = useState(null);
 
@@ -14,6 +15,15 @@ export default function ProductDetailsScreen({ route }) {
       console.log("Error loading product");
     }
   };
+
+  const handleAddToCart = async () => {
+  try {
+    await addToCartApi(id, token);
+    alert("Added to cart ✅");
+  } catch (e) {
+    alert("Failed to add to cart");
+  }
+};
 
   useEffect(() => {
     load();
@@ -28,9 +38,9 @@ export default function ProductDetailsScreen({ route }) {
       <Text style={styles.name}>{product.name}</Text>
       <Text style={styles.price}>Rs. {product.price}</Text>
 
-      <Pressable style={styles.button}>
-        <Text style={{ color: "#fff" }}>Add to Cart</Text>
-      </Pressable>
+      <View style={{ marginTop: 20 }}>
+        <Button title="Add to Cart" onPress={handleAddToCart} color="#111" />
+      </View>
     </View>
   );
 }

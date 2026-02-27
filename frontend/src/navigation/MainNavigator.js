@@ -12,7 +12,7 @@ import ProfileScreen from "../screens/profile/ProfileScreen";
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-function HomeStack() {
+function HomeStack({ token }) {
   return (
     <Stack.Navigator>
       <Stack.Screen
@@ -20,16 +20,14 @@ function HomeStack() {
         component={HomeScreen}
         options={{ title: "Home" }}
       />
-      <Stack.Screen
-        name="ProductDetails"
-        component={ProductDetailsScreen}
-        options={{ title: "Product Details" }}
-      />
+      <Stack.Screen name="ProductDetails">
+         {(props) => <ProductDetailsScreen {...props} token={token} />}
+      </Stack.Screen> 
     </Stack.Navigator>
   );
 }
 
-export default function MainNavigator() {
+export default function MainNavigator({ token, setToken }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -48,7 +46,9 @@ export default function MainNavigator() {
         tabBarInactiveTintColor: "gray",
       })}
     >
-      <Tab.Screen name="Home" component={HomeStack} />
+      <Tab.Screen name="Home">
+        {() => <HomeStack token={token} />}
+      </Tab.Screen>
       <Tab.Screen name="Cart" component={CartScreen} />
       <Tab.Screen name="Orders" component={OrdersScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
