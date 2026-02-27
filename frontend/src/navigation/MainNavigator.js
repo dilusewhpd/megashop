@@ -1,15 +1,31 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import { View, Text } from "react-native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
+import HomeScreen from "../screens/home/HomeScreen";
+import ProductDetailsScreen from "../screens/home/ProductDetailsScreen";
+import CartScreen from "../screens/cart/CartScreen";
+import OrdersScreen from "../screens/orders/OrdersScreen";
+import ProfileScreen from "../screens/profile/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
-function Screen({ title }) {
+function HomeStack() {
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-      <Text>{title}</Text>
-    </View>
+    <Stack.Navigator>
+      <Stack.Screen
+        name="HomeMain"
+        component={HomeScreen}
+        options={{ title: "Home" }}
+      />
+      <Stack.Screen
+        name="ProductDetails"
+        component={ProductDetailsScreen}
+        options={{ title: "Product Details" }}
+      />
+    </Stack.Navigator>
   );
 }
 
@@ -17,6 +33,7 @@ export default function MainNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        headerShown: false, // ✅ hides tab header (fixes double header)
         tabBarIcon: ({ focused, color, size }) => {
           let iconName = "ellipse-outline";
 
@@ -31,10 +48,10 @@ export default function MainNavigator() {
         tabBarInactiveTintColor: "gray",
       })}
     >
-      <Tab.Screen name="Home" children={() => <Screen title="Home ✅" />} />
-      <Tab.Screen name="Cart" children={() => <Screen title="Cart ✅" />} />
-      <Tab.Screen name="Orders" children={() => <Screen title="Orders ✅" />} />
-      <Tab.Screen name="Profile" children={() => <Screen title="Profile ✅" />} />
+      <Tab.Screen name="Home" component={HomeStack} />
+      <Tab.Screen name="Cart" component={CartScreen} />
+      <Tab.Screen name="Orders" component={OrdersScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
