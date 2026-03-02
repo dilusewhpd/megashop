@@ -1,5 +1,6 @@
 import { api } from "./client";
 
+// Cart APIs
 export const addToCartApi = (productId, token) => {
   return api.post(
     "/cart",
@@ -10,4 +11,11 @@ export const addToCartApi = (productId, token) => {
       },
     }
   );
+};
+
+// Get cart items
+export const getCartApi = (token) => {
+  return api.get("/cart", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 };

@@ -49,7 +49,9 @@ export default function MainNavigator({ token, setToken }) {
       <Tab.Screen name="Home">
         {() => <HomeStack token={token} />}
       </Tab.Screen>
-      <Tab.Screen name="Cart" component={CartScreen} />
+      <Tab.Screen name="Cart">
+        {() => <CartScreen token={token} />}
+      </Tab.Screen>
       <Tab.Screen name="Orders" component={OrdersScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
