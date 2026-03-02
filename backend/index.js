@@ -6,6 +6,7 @@ const authMiddleware = require("./middleware/authMiddleware");
 const productRoutes = require("./routes/productRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 
 console.log("DB_USER:", process.env.DB_USER);
@@ -22,6 +23,7 @@ app.use("/auth", authRoutes);
 app.use("/products", productRoutes);
 app.use("/cart", cartRoutes);
 app.use("/orders", orderRoutes);
+app.use("/payment/notify", paymentRoutes);
 
 // test route
 app.get("/", (req, res) => {

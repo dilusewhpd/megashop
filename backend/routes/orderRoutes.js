@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const authMiddleware = require("../middleware/authMiddleware");
-const { checkout , getMyOrders , getOrderByNumber  } = require("../controllers/orderController");
+const { checkout , getMyOrders , getOrderByNumber } = require("../controllers/orderController");
 
 // POST /orders/checkout
 router.post("/checkout", authMiddleware, checkout);

@@ -47,7 +47,7 @@ exports.checkout = async (req, res) => {
         orderId,
         userId,
         orderNumber,
-        "placed",
+        "Pending",
         subtotal,
         tax,
         shipping,
