@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { loginApi } from "../../api/authApi";
 
-export default function LoginScreen({ navigation , setToken }) {
+export default function LoginScreen({ navigation, setToken }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -12,11 +13,21 @@ export default function LoginScreen({ navigation , setToken }) {
     try {
       setLoading(true);
       setMessage("Logging in...");
+
       const res = await loginApi(email, password);
-      setToken(res.data.token);
+
+      const token = res.data.token;
+      const user = res.data.user;
+
+      // ✅ Save token
+      await AsyncStorage.setItem("token", token);
+
+      // ✅ Save user
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+
+      setToken(token);
+
       setMessage("Login successful ✅");
-      console.log("Token:", res.data.token);
-      console.log("User:", res.data.user);
 
     } catch (err) {
       const errorMsg =
@@ -47,7 +58,7 @@ export default function LoginScreen({ navigation , setToken }) {
         secureTextEntry
       />
 
-      <Pressable style={styles.button} onPress={handleLogin} disabled={loading}>
+      <Pressable style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>
           {loading ? "Please wait..." : "Login"}
         </Text>
@@ -56,7 +67,9 @@ export default function LoginScreen({ navigation , setToken }) {
       <Text style={styles.message}>{message}</Text>
 
       <Pressable onPress={() => navigation.navigate("Register")}>
-        <Text style={styles.link}>Don't have an account? Register</Text>
+        <Text style={styles.link}>
+          Don't have an account? Register
+        </Text>
       </Pressable>
     </View>
   );
