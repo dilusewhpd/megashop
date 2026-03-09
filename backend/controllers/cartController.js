@@ -134,3 +134,16 @@ exports.removeCartItem = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+// Clear Cart (used after successful payment)
+exports.clearCart = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    await db.query("DELETE FROM cart_items WHERE user_id = ?", [userId]);
+
+    return res.json({ message: "Cart cleared ✅" });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
