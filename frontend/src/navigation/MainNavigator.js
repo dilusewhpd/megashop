@@ -11,6 +11,7 @@ import OrdersScreen from "../screens/orders/OrdersScreen";
 import ProfileScreen from "../screens/profile/ProfileScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
 import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
+import OrderDetailsScreen from "../screens/orders/OrderDetailsScreen"; // ✅ Import
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -56,6 +57,32 @@ function CartStack({ token }) {
   );
 }
 
+// Orders stack
+function OrdersStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: "#f8f8f8" },
+        headerTintColor: "#111",
+        headerTitleAlign: "center",
+        headerTitleStyle: { fontWeight: "700" },
+      }}
+    >
+      <Stack.Screen
+        name="OrdersMain"
+        options={{ title: "My Orders" }}
+      >
+        {(props) => <OrdersScreen {...props} />}
+      </Stack.Screen>
+      <Stack.Screen
+        name="OrderDetails"
+        component={OrderDetailsScreen}
+        options={{ title: "Order Details" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 // Main Tab Navigator
 export default function MainNavigator({ token, setToken }) {
   return (
@@ -76,7 +103,7 @@ export default function MainNavigator({ token, setToken }) {
     >
       <Tab.Screen name="Home">{() => <HomeStack token={token} />}</Tab.Screen>
       <Tab.Screen name="Cart">{() => <CartStack token={token} />}</Tab.Screen>
-      <Tab.Screen name="Orders" component={OrdersScreen} />
+      <Tab.Screen name="Orders" component={OrdersStack} />
       <Tab.Screen name="Profile">
         {(props) => <ProfileStack {...props} setToken={setToken} />}
       </Tab.Screen>
