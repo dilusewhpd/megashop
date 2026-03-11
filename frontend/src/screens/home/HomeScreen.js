@@ -7,9 +7,11 @@ import {
   StyleSheet,
   TextInput,
   ScrollView,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getProductsApi } from "../../api/productApi";
+import { productImages } from "../../utils/imageMapping";
 
 export default function HomeScreen({ navigation }) {
   const [products, setProducts] = useState([]);
@@ -21,9 +23,18 @@ export default function HomeScreen({ navigation }) {
     try {
       setStatus("Loading...");
       const res = await getProductsApi();
-      setProducts(res.data.products || []);
+      const products = res.data.products || [];
+
+      // parse images JSON string into array
+      const parsedProducts = products.map((p) => ({
+        ...p,
+        images: typeof p.images === "string" ? JSON.parse(p.images) : p.images,
+      }));
+
+      setProducts(parsedProducts);
       setStatus("");
     } catch (e) {
+      console.log("LOAD ERROR:", e);
       setStatus("Failed to load products");
     }
   };
@@ -50,14 +61,13 @@ export default function HomeScreen({ navigation }) {
   // 🔎 Filter Logic
   const filteredProducts = products
     .filter((p) =>
-      (p?.name || "").toLowerCase().includes(query.trim().toLowerCase())
+      (p?.name || "").toLowerCase().includes(query.trim().toLowerCase()),
     )
     .filter((p) => {
       const price = Number(p?.price || 0);
 
       if (priceFilter === "LT2000") return price < 2000;
-      if (priceFilter === "BTW2000_5000")
-        return price >= 2000 && price <= 5000;
+      if (priceFilter === "BTW2000_5000") return price >= 2000 && price <= 5000;
       if (priceFilter === "GT5000") return price > 5000;
 
       return true;
@@ -65,34 +75,46 @@ export default function HomeScreen({ navigation }) {
 
   const renderItem = ({ item }) => (
     <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        { opacity: pressed ? 0.85 : 1 },
-      ]}
-      onPress={() =>
-        navigation.navigate("ProductDetails", { id: item.id })
-      }
+      style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
+      onPress={() => navigation.navigate("ProductDetails", { id: item.id })}
     >
-      <View style={styles.cardTop}>
-        <Text style={styles.name} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Ionicons name="chevron-forward" size={18} color="#999" />
-      </View>
+      <View style={styles.cardRow}>
+        {/* Product Image */}
+        {item.images && item.images.length > 0 ? (
+          <Image
+            source={
+              productImages[item.images[0]] || productImages["placeholder.jpeg"]
+            }
+            style={styles.productImageLeft}
+          />
+        ) : (
+          <Image
+            source={productImages["placeholder.jpeg"]}
+            style={styles.productImageLeft}
+          />
+        )}
 
-      <Text style={styles.price}>Rs. {item.price}</Text>
-
-      <View style={styles.metaRow}>
-        <View style={styles.pill}>
-          <Ionicons name="star" size={14} color="#111" />
-          <Text style={styles.pillText}>
-            {item.rating ?? "-"} ({item.review_count ?? 0})
+        {/* Product Info */}
+        <View style={styles.cardInfo}>
+          <Text style={styles.name} numberOfLines={1}>
+            {item.name}
           </Text>
-        </View>
 
-        <View style={styles.pill}>
-          <Ionicons name="cube" size={14} color="#111" />
-          <Text style={styles.pillText}>In stock</Text>
+          <Text style={styles.price}>Rs. {item.price}</Text>
+
+          <View style={styles.metaRow}>
+            <View style={styles.pill}>
+              <Ionicons name="star" size={14} color="#111" />
+              <Text style={styles.pillText}>
+                {item.rating ?? "-"} ({item.review_count ?? 0})
+              </Text>
+            </View>
+
+            <View style={styles.pill}>
+              <Ionicons name="cube" size={14} color="#111" />
+              <Text style={styles.pillText}>In stock</Text>
+            </View>
+          </View>
         </View>
       </View>
     </Pressable>
@@ -121,30 +143,33 @@ export default function HomeScreen({ navigation }) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{ marginBottom: 14 }}
+        contentContainerStyle={{
+          paddingLeft: 16,
+          paddingRight: 10,
+          marginBottom: 4,
+        }}
+        style={{ maxHeight: 50 }}
       >
-        <View style={styles.chipContainer}>
-          <Chip
-            label="All"
-            active={priceFilter === "ALL"}
-            onPress={() => setPriceFilter("ALL")}
-          />
-          <Chip
-            label="Under 2000"
-            active={priceFilter === "LT2000"}
-            onPress={() => setPriceFilter("LT2000")}
-          />
-          <Chip
-            label="2000 - 5000"
-            active={priceFilter === "BTW2000_5000"}
-            onPress={() => setPriceFilter("BTW2000_5000")}
-          />
-          <Chip
-            label="Above 5000"
-            active={priceFilter === "GT5000"}
-            onPress={() => setPriceFilter("GT5000")}
-          />
-        </View>
+        <Chip
+          label="All"
+          active={priceFilter === "ALL"}
+          onPress={() => setPriceFilter("ALL")}
+        />
+        <Chip
+          label="Under 2000"
+          active={priceFilter === "LT2000"}
+          onPress={() => setPriceFilter("LT2000")}
+        />
+        <Chip
+          label="2000 - 5000"
+          active={priceFilter === "BTW2000_5000"}
+          onPress={() => setPriceFilter("BTW2000_5000")}
+        />
+        <Chip
+          label="Above 5000"
+          active={priceFilter === "GT5000"}
+          onPress={() => setPriceFilter("GT5000")}
+        />
       </ScrollView>
 
       {/* 📦 PRODUCT LIST */}
@@ -156,6 +181,8 @@ export default function HomeScreen({ navigation }) {
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20, paddingTop: 4 }}
+          style={{ flex: 1 }} // take remaining vertical space
         />
       )}
     </View>
@@ -179,7 +206,6 @@ function Chip({ label, active, onPress }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
     backgroundColor: "#fff",
   },
 
@@ -193,6 +219,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     marginBottom: 14,
+    marginTop: 10,
+    marginLeft: 16,
+    marginRight: 16,
     backgroundColor: "#fafafa",
   },
 
@@ -201,19 +230,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // 🎯 Chips
-  chipContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  productImageLeft: {
+    width: 90,
+    height: 90, // adjust height as needed
+    borderRadius: 12,
+    resizeMode: "cover",
+    marginRight: 12,
   },
 
   chip: {
     paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 50,
+    height: 34,
+    justifyContent: "center",
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: "#e5e5e5",
-    marginRight: 8,
+    marginRight: 10,
     backgroundColor: "#f5f5f5",
   },
 
@@ -239,6 +271,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
     marginBottom: 14,
+    marginLeft: 16,
+    marginRight: 16,
     backgroundColor: "#fff",
   },
 
@@ -259,6 +293,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 15,
     fontWeight: "800",
+  },
+
+  cardRow: {
+    flexDirection: "row", // horizontal layout
+    alignItems: "center",
+    gap: 12, // space between image and info
+  },
+
+  cardInfo: {
+    flex: 1, // take remaining horizontal space
   },
 
   metaRow: {
