@@ -5,7 +5,13 @@ const { v4: uuidv4 } = require("uuid");
 exports.checkout = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { shippingAddress = {}, paymentMethod = "COD" } = req.body;
+
+    // Accept paymentStatus from frontend (default "Pending")
+    const {
+      shippingAddress = {},
+      paymentMethod = "COD",
+      paymentStatus = "Pending",
+    } = req.body;
 
     // 1) Get cart items
     const [cart] = await db.query(
@@ -15,7 +21,7 @@ exports.checkout = async (req, res) => {
       JOIN products p ON c.product_id = p.id
       WHERE c.user_id = ?
       `,
-      [userId]
+      [userId],
     );
 
     if (cart.length === 0) {
@@ -47,7 +53,7 @@ exports.checkout = async (req, res) => {
         orderId,
         userId,
         orderNumber,
-        "Pending",
+        paymentStatus, // ← use the status from frontend
         subtotal,
         tax,
         shipping,
@@ -55,20 +61,23 @@ exports.checkout = async (req, res) => {
         total,
         JSON.stringify(shippingAddress),
         paymentMethod,
-      ]
+      ],
     );
 
-    // 4) Clear cart (MVP behavior)
+    // 4) Clear cart
     await db.query("DELETE FROM cart_items WHERE user_id = ?", [userId]);
 
     return res.status(201).json({
       message: "Order placed successfully ✅",
       orderNumber,
       total,
+      status: paymentStatus, // return actual status
     });
   } catch (err) {
     console.error("CHECKOUT ERROR:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", error: err.message });
   }
 };
 
@@ -84,13 +93,15 @@ exports.getMyOrders = async (req, res) => {
       WHERE user_id = ?
       ORDER BY created_at DESC
       `,
-      [userId]
+      [userId],
     );
 
     return res.json({ orders: rows });
   } catch (err) {
     console.error("GET ORDERS ERROR:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", error: err.message });
   }
 };
 
@@ -103,11 +114,11 @@ exports.getOrderByNumber = async (req, res) => {
     const [rows] = await db.query(
       `
       SELECT id, order_number, status, subtotal, tax, shipping, discount, total,
-             shipping_address, payment_method, created_at
+            shipping_address, payment_method, created_at
       FROM orders
       WHERE user_id = ? AND order_number = ?
       `,
-      [userId, orderNumber]
+      [userId, orderNumber],
     );
 
     if (rows.length === 0) {
@@ -117,6 +128,29 @@ exports.getOrderByNumber = async (req, res) => {
     return res.json({ order: rows[0] });
   } catch (err) {
     console.error("GET ORDER DETAILS ERROR:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: err.message });
+  }
+};
+
+// PATCH /orders/:orderNumber/pay
+exports.updateOrderStatus = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { orderNumber } = req.params;
+    const { status } = req.body; // expect "Paid"
+
+    const [rows] = await db.query(
+      `UPDATE orders
+       SET status = ?
+       WHERE user_id = ? AND order_number = ?`,
+      [status, userId, orderNumber]
+    );
+
+    return res.json({ message: "Order status updated ✅", status });
+  } catch (err) {
+    console.error("UPDATE ORDER STATUS ERROR:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
