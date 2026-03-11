@@ -6,21 +6,33 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getOrdersApi } from "../../api/orderApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 
-export default function OrdersScreen() {
+const API_BASE = "http://localhost:5000"; // change to your PC IP if testing on phone 
+
+export default function OrdersScreen({ navigation }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadOrders = async () => {
     try {
-      const res = await getOrdersApi();
+      setLoading(true);
+      const token = await AsyncStorage.getItem("token"); // now AsyncStorage works
+
+      const res = await axios.get(`${API_BASE}/orders/my-orders`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log("ORDERS RESPONSE:", res.data);
       setOrders(res.data.orders || []);
     } catch (err) {
-      console.log("Failed to load orders");
+      console.log("LOAD ORDERS ERROR:", err.response?.data || err.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -37,18 +49,26 @@ export default function OrdersScreen() {
   }, []);
 
   const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.topRow}>
-        <Text style={styles.orderId}>Order #{item.id}</Text>
-        <StatusBadge status={item.status} />
+    <Pressable
+      onPress={() =>
+        navigation.navigate("OrderDetails", {
+          orderNumber: item.order_number,
+        })
+      }
+    >
+      <View style={styles.card}>
+        <View style={styles.topRow}>
+          <Text style={styles.orderId}>Order #{item.order_number}</Text>
+          <StatusBadge status={item.status} />
+        </View>
+
+        <Text style={styles.amount}>Rs. {item.total}</Text>
+
+        <Text style={styles.date}>
+          {new Date(item.created_at).toDateString()}
+        </Text>
       </View>
-
-      <Text style={styles.amount}>Rs. {item.total_amount}</Text>
-
-      <Text style={styles.date}>
-        {new Date(item.created_at).toDateString()}
-      </Text>
-    </View>
+    </Pressable>
   );
 
   if (loading) {
