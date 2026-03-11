@@ -9,7 +9,7 @@ exports.createPayHerePayment = async (req, res) => {
     // 1️⃣ Get order
     const [rows] = await db.query(
       "SELECT * FROM orders WHERE user_id = ? AND order_number = ?",
-      [userId, orderNumber]
+      [userId, orderNumber],
     );
 
     if (rows.length === 0) {
@@ -34,19 +34,15 @@ exports.createPayHerePayment = async (req, res) => {
     const hash = crypto
       .createHash("md5")
       .update(
-        merchant_id +
-          order.order_number +
-          amount +
-          currency +
-          hashedSecret
+        merchant_id + order.order_number + amount + currency + hashedSecret,
       )
       .digest("hex")
       .toUpperCase();
 
     return res.json({
       merchant_id,
-      return_url: "https://yourapp.com/payment-success",
-      cancel_url: "https://yourapp.com/payment-cancel",
+      return_url: "http://localhost:5000/payment/success",
+      cancel_url: "http://localhost:5000/payment/cancel",
       notify_url: process.env.PAYHERE_NOTIFY_URL,
       order_id: order.order_number,
       items: "MegaShop Order",
@@ -92,7 +88,7 @@ exports.payHereNotify = async (req, res) => {
             .createHash("md5")
             .update(merchant_secret)
             .digest("hex")
-            .toUpperCase()
+            .toUpperCase(),
       )
       .digest("hex")
       .toUpperCase();
@@ -102,10 +98,10 @@ exports.payHereNotify = async (req, res) => {
     }
 
     if (status_code == 2) {
-      await db.query(
-        "UPDATE orders SET status = ? WHERE order_number = ?",
-        ["paid", order_id]
-      );
+      await db.query("UPDATE orders SET status = ? WHERE order_number = ?", [
+        "paid",
+        order_id,
+      ]);
     }
 
     res.sendStatus(200);

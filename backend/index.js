@@ -23,7 +23,7 @@ app.use("/auth", authRoutes);
 app.use("/products", productRoutes);
 app.use("/cart", cartRoutes);
 app.use("/orders", orderRoutes);
-app.use("/payment/notify", paymentRoutes);
+app.use("/payment", paymentRoutes);
 
 // test route
 app.get("/", (req, res) => {

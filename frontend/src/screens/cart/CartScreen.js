@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  SafeAreaView,
   View,
   Text,
   FlatList,
@@ -19,7 +20,7 @@ import {
   clearCartApi,
 } from "../../api/cartApi";
 
-export default function CartScreen() {
+export default function CartScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [status, setStatus] = useState("Loading...");
 
@@ -41,7 +42,7 @@ export default function CartScreen() {
     }
   };
 
-  // ✅ Reload cart whenever screen is focused
+  // Reload cart whenever screen is focused
   useFocusEffect(
     React.useCallback(() => {
       load();
@@ -103,13 +104,19 @@ export default function CartScreen() {
         <Text style={styles.meta}>Rs. {item?.price}</Text>
 
         <View style={styles.qtyRow}>
-          <Pressable style={styles.qtyBtn} onPress={() => changeQuantity(item, item.quantity - 1)}>
+          <Pressable
+            style={styles.qtyBtn}
+            onPress={() => changeQuantity(item, item.quantity - 1)}
+          >
             <Text style={styles.qtyText}>-</Text>
           </Pressable>
 
           <Text style={styles.qtyNumber}>{item?.quantity}</Text>
 
-          <Pressable style={styles.qtyBtn} onPress={() => changeQuantity(item, item.quantity + 1)}>
+          <Pressable
+            style={styles.qtyBtn}
+            onPress={() => changeQuantity(item, item.quantity + 1)}
+          >
             <Text style={styles.qtyText}>+</Text>
           </Pressable>
         </View>
@@ -122,62 +129,94 @@ export default function CartScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Cart</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
+      <View style={{ flex: 1, padding: 14 }}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>My Cart</Text>
 
-        <View style={{ flexDirection: "row" }}>
-          <Pressable onPress={load} style={styles.iconBtn}>
-            <Ionicons name="refresh" size={22} color="#111" />
-          </Pressable>
+          <View style={{ flexDirection: "row" }}>
+            <Pressable onPress={load} style={styles.iconBtn}>
+              <Ionicons name="refresh" size={22} color="#111" />
+            </Pressable>
 
-          <Pressable onPress={clearCart} style={styles.iconBtn}>
-            <Ionicons name="trash" size={22} color="red" />
-          </Pressable>
+            <Pressable onPress={clearCart} style={styles.iconBtn}>
+              <Ionicons name="trash" size={22} color="red" />
+            </Pressable>
+          </View>
         </View>
+
+        {/* Summary */}
+        <View style={styles.summary}>
+          <Text style={styles.summaryText}>Items: {items.length}</Text>
+          <Text style={styles.summaryText}>Total: Rs. {total}</Text>
+        </View>
+
+        {status ? <Text style={styles.status}>{status}</Text> : null}
+
+        {items.length === 0 && !status ? (
+          <Text style={styles.emptyText}>Your cart is empty</Text>
+        ) : (
+          <FlatList
+            data={items}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 120 }} // space for button
+          />
+        )}
       </View>
 
-      <View style={styles.summary}>
-        <Text style={styles.summaryText}>Items: {items.length}</Text>
-        <Text style={styles.summaryText}>Total: Rs. {total}</Text>
-      </View>
-
-      {status ? <Text style={styles.status}>{status}</Text> : null}
-
-      {items.length === 0 && !status ? (
-        <Text style={styles.emptyText}>Your cart is empty</Text>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 120 }}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-
+      {/* Bottom Checkout Button */}
       <View style={styles.bottomBar}>
         <Pressable
           style={styles.primaryBtn}
-          onPress={() => Alert.alert("Checkout", "Proceed to Checkout")}
+          onPress={() => {
+            if (items.length === 0) {
+              Alert.alert("Cart is empty", "Please add items before checkout.");
+            } else {
+              navigation.navigate("Checkout", { cartItems: items, total }); // pass data
+            }
+          }}
         >
           <Text style={styles.primaryText}>Proceed to Checkout</Text>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 14, backgroundColor: "#fff" },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
   title: { fontSize: 20, fontWeight: "800" },
   iconBtn: { padding: 6, borderRadius: 20 },
-  summary: { borderWidth: 1, borderColor: "#eee", borderRadius: 14, padding: 12, marginBottom: 12, flexDirection: "row", justifyContent: "space-between" },
+  summary: {
+    borderWidth: 1,
+    borderColor: "#eee",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
   summaryText: { fontWeight: "700" },
   status: { marginBottom: 10, color: "#555" },
   emptyText: { textAlign: "center", marginTop: 40, fontSize: 16, color: "#888" },
-  card: { borderWidth: 1, borderColor: "#eee", borderRadius: 14, padding: 12, marginBottom: 10, flexDirection: "row", alignItems: "center" },
+  card: {
+    borderWidth: 1,
+    borderColor: "#eee",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
   image: { width: 70, height: 70, borderRadius: 12 },
   imagePlaceholder: { backgroundColor: "#eee" },
   name: { fontSize: 15, fontWeight: "800" },
@@ -186,7 +225,17 @@ const styles = StyleSheet.create({
   qtyBtn: { backgroundColor: "#111", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   qtyText: { color: "#fff", fontWeight: "bold" },
   qtyNumber: { marginHorizontal: 12, fontWeight: "700" },
-  bottomBar: { position: "absolute", left: 14, right: 14, bottom: 14 },
-  primaryBtn: { backgroundColor: "#111", paddingVertical: 14, borderRadius: 14, alignItems: "center" },
+  bottomBar: {
+    padding: 14,
+    borderTopWidth: 1,
+    borderColor: "#eee",
+    backgroundColor: "#fff",
+  },
+  primaryBtn: {
+    backgroundColor: "#111",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+  },
   primaryText: { color: "#fff", fontWeight: "800" },
 });

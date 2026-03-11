@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "../screens/home/HomeScreen";
 import ProductDetailsScreen from "../screens/home/ProductDetailsScreen";
 import CartScreen from "../screens/cart/CartScreen";
+import CheckoutScreen from "../screens/orders/CheckoutScreen"; // ✅ Import
 import OrdersScreen from "../screens/orders/OrdersScreen";
 import ProfileScreen from "../screens/profile/ProfileScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
@@ -39,6 +40,22 @@ function ProfileStack({ setToken }) {
   );
 }
 
+// Cart stack
+function CartStack({ token }) {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="CartMain" options={{ title: "Cart" }}>
+        {(props) => <CartScreen {...props} token={token} />}
+      </Stack.Screen>
+      <Stack.Screen
+        name="Checkout"
+        component={CheckoutScreen} 
+        options={{ title: "Checkout" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 // Main Tab Navigator
 export default function MainNavigator({ token, setToken }) {
   return (
@@ -58,10 +75,8 @@ export default function MainNavigator({ token, setToken }) {
       })}
     >
       <Tab.Screen name="Home">{() => <HomeStack token={token} />}</Tab.Screen>
-      <Tab.Screen name="Cart">{() => <CartScreen token={token} />}</Tab.Screen>
+      <Tab.Screen name="Cart">{() => <CartStack token={token} />}</Tab.Screen>
       <Tab.Screen name="Orders" component={OrdersScreen} />
-      
-      {/* ✅ Directly use ProfileStack and pass setToken */}
       <Tab.Screen name="Profile">
         {(props) => <ProfileStack {...props} setToken={setToken} />}
       </Tab.Screen>
