@@ -17,7 +17,6 @@ import axios from "axios";
 const API_BASE = "http://localhost:5000";
 
 export default function CheckoutScreen({ navigation }) {
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -58,7 +57,7 @@ export default function CheckoutScreen({ navigation }) {
             address,
           },
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       console.log("ORDER RESPONSE:", orderRes.data);
@@ -69,7 +68,7 @@ export default function CheckoutScreen({ navigation }) {
       const payRes = await axios.post(
         `${API_BASE}/payment/create`,
         { orderNumber },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       console.log("PAYHERE DATA:", payRes.data);
@@ -79,9 +78,15 @@ export default function CheckoutScreen({ navigation }) {
         return;
       }
 
+      // 3️⃣ UPDATE ORDER STATUS TO PAID (temporary/testing)
+      await axios.patch(
+        `${API_BASE}/orders/${orderNumber}/pay`,
+        { status: "Paid" },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
       // 3️⃣ REDIRECT TO PAYHERE SANDBOX
       redirectToPayHere(payRes.data);
-
     } catch (err) {
       console.log("CHECKOUT ERROR:", err.response?.data || err.message);
       Alert.alert("Error", "Checkout failed");
@@ -150,17 +155,13 @@ export default function CheckoutScreen({ navigation }) {
           multiline
         />
 
-        <Pressable
-          style={styles.button}
-          onPress={handleCheckout}
-        >
+        <Pressable style={styles.button} onPress={handleCheckout}>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.buttonText}>Pay with PayHere</Text>
           )}
         </Pressable>
-
       </ScrollView>
     </KeyboardAvoidingView>
   );
