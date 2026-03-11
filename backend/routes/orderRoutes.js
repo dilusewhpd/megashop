@@ -8,7 +8,7 @@ const { checkout , getMyOrders , getOrderByNumber } = require("../controllers/or
 router.post("/checkout", authMiddleware, checkout);
 
 // GET /orders/my-orders
-router.get("/", authMiddleware, getMyOrders);
+router.get("/my-orders", authMiddleware, getMyOrders);
 
 // GET /orders/:orderNumber
 router.get("/:orderNumber", authMiddleware, getOrderByNumber);  
