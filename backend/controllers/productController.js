@@ -4,7 +4,8 @@ const db = require("../config/db");
 exports.getProducts = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT id, name, price, original_price, rating, review_count, sold_count, seller, category, images, badges FROM products"
+      `SELECT id, name, price, original_price, discount, rating, review_count, sold_count, seller, category, images, badges
+      FROM products`
     );
 
     res.json({ products: rows });
@@ -13,7 +14,6 @@ exports.getProducts = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
 // Get Product by ID
 exports.getProductById = async (req, res) => {
   try {
