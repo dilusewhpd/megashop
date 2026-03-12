@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,12 +16,40 @@ import axios from "axios";
 
 const API_BASE = "http://localhost:5000";
 
-export default function CheckoutScreen({ navigation }) {
+export default function CheckoutScreen({ navigation, route }) {
+  const { cartItems = [] } = route.params;
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // ✅ Calculate order summary
+  const orderSummary = useMemo(() => {
+    const totalItems = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+    const fullPrice = cartItems.reduce(
+      (sum, item) => sum + Number(item.original_price || item.price || 0) * Number(item.quantity || 0),
+      0
+    );
+
+    const totalDiscount = cartItems.reduce((sum, item) => {
+      const discount = Number(item.discount || 0);
+      const original = Number(item.original_price || item.price || 0);
+      const finalPrice = original - (original * discount) / 100;
+      return sum + (original - finalPrice) * Number(item.quantity || 0);
+    }, 0);
+
+    const finalTotal = cartItems.reduce((sum, item) => {
+      const discount = Number(item.discount || 0);
+      const original = Number(item.original_price || item.price || 0);
+      const finalPrice = original - (original * discount) / 100;
+      return sum + finalPrice * Number(item.quantity || 0);
+    }, 0);
+
+    return { totalItems, fullPrice, totalDiscount, finalTotal };
+  }, [cartItems]);
 
   const validate = () => {
     if (!name || !email || !phone || !address) {
@@ -45,47 +73,45 @@ export default function CheckoutScreen({ navigation }) {
 
       console.log("Creating order...");
 
-      // 1️⃣ CREATE ORDER
       const orderRes = await axios.post(
         `${API_BASE}/orders/checkout`,
         {
           paymentMethod: "ONLINE",
-          shippingAddress: {
-            name,
-            email,
-            phone,
-            address,
-          },
+          shippingAddress: { name, email, phone, address },
+          items: cartItems.map((item) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price:
+              (item.original_price || item.price) -
+              ((item.original_price || item.price) * (item.discount || 0)) / 100,
+          })),
+          total: orderSummary.finalTotal,
         },
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log("ORDER RESPONSE:", orderRes.data);
       const orderNumber = orderRes.data.orderNumber;
 
-      // 2️⃣ CREATE PAYHERE PAYMENT
-      console.log("Creating payment...");
+      // CREATE PAYHERE PAYMENT
       const payRes = await axios.post(
         `${API_BASE}/payment/create`,
         { orderNumber },
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      console.log("PAYHERE DATA:", payRes.data);
 
       if (!payRes.data) {
         Alert.alert("Payment Error", "Failed to create PayHere payment.");
         return;
       }
 
-      // 3️⃣ UPDATE ORDER STATUS TO PAID (temporary/testing)
+      // TEMP: mark order as paid (testing)
       await axios.patch(
         `${API_BASE}/orders/${orderNumber}/pay`,
         { status: "Paid" },
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // 3️⃣ REDIRECT TO PAYHERE SANDBOX
+      // REDIRECT TO PAYHERE
       redirectToPayHere(payRes.data);
     } catch (err) {
       console.log("CHECKOUT ERROR:", err.response?.data || err.message);
@@ -95,7 +121,6 @@ export default function CheckoutScreen({ navigation }) {
     }
   };
 
-  // 🔵 FUNCTION TO REDIRECT TO PAYHERE SANDBOX
   const redirectToPayHere = (paymentData) => {
     const form = document.createElement("form");
     form.method = "POST";
@@ -115,74 +140,101 @@ export default function CheckoutScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#f5f5f5" }}
+      style={{ flex: 1, backgroundColor: "#f2f2f7" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView
-        contentContainerStyle={{ padding: 20 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title}>Delivery Details</Text>
+      <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+        {/* ================= Order Summary ================= */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Order Summary</Text>
+          <View style={styles.summaryRow}>
+            <Text>Total Items</Text>
+            <Text>{orderSummary.totalItems}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text>Full Price</Text>
+            <Text>Rs. {orderSummary.fullPrice}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text>Discount</Text>
+            <Text style={styles.discount}>- Rs. {orderSummary.totalDiscount}</Text>
+          </View>
+          <View style={[styles.summaryRow, { borderTopWidth: 1, borderTopColor: "#ddd", marginTop: 8, paddingTop: 8 }]}>
+            <Text style={styles.finalTotal}>Total</Text>
+            <Text style={styles.finalTotal}>Rs. {orderSummary.finalTotal}</Text>
+          </View>
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Full Name"
-          value={name}
-          onChangeText={setName}
-        />
+        {/* ================= Delivery Details ================= */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Delivery Details</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Full Name"
+            value={name}
+            onChangeText={setName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Phone"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+          <TextInput
+            style={[styles.input, { height: 100 }]}
+            placeholder="Delivery Address"
+            value={address}
+            onChangeText={setAddress}
+            multiline
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Phone"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-        />
-
-        <TextInput
-          style={[styles.input, { height: 100 }]}
-          placeholder="Delivery Address"
-          value={address}
-          onChangeText={setAddress}
-          multiline
-        />
-
-        <Pressable style={styles.button} onPress={handleCheckout}>
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Pay with PayHere</Text>
-          )}
-        </Pressable>
+          <Pressable style={styles.button} onPress={handleCheckout} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Pay with PayHere</Text>
+            )}
+          </Pressable>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
-    fontSize: 22,
-    fontWeight: "800",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  input: {
+  card: {
     backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  cardTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12, color: "#111" },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+  discount: { color: "red", fontWeight: "700" },
+  finalTotal: { fontSize: 16, fontWeight: "800", color: "#111" },
+  input: {
+    backgroundColor: "#f9f9f9",
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 12,
-    marginBottom: 15,
+    borderRadius: 10,
+    marginBottom: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#eee",
   },
   button: {
     backgroundColor: "#111",
@@ -191,9 +243,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: 16,
-  },
+  buttonText: { color: "#fff", fontWeight: "800", fontSize: 16 },
 });
