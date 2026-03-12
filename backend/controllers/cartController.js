@@ -4,7 +4,6 @@ const { v4: uuidv4 } = require("uuid");
 // Get Cart
 exports.getCart = async (req, res) => {
   try {
-    // user id from JWT
     const userId = req.user.userId;
 
     const [rows] = await db.query(
@@ -16,7 +15,9 @@ exports.getCart = async (req, res) => {
         c.selected_size,
         p.id AS product_id,
         p.name,
+        p.original_price,
         p.price,
+        p.discount,
         p.images
       FROM cart_items c
       JOIN products p ON c.product_id = p.id
@@ -25,7 +26,29 @@ exports.getCart = async (req, res) => {
       [userId]
     );
 
-    return res.json({ cart: rows });
+    // Parse images and calculate finalPrice
+    const cartItems = rows.map((item) => {
+      const images =
+        !item.images || item.images.length === 0
+          ? ["placeholder.jpeg"]
+          : typeof item.images === "string"
+          ? JSON.parse(item.images)
+          : item.images;
+
+      const originalPrice = Number(item.original_price || item.price || 0);
+      const discount = Number(item.discount || 0);
+      const finalPrice = originalPrice - (originalPrice * discount) / 100;
+
+      return {
+        ...item,
+        images,
+        original_price: originalPrice,
+        discount,
+        finalPrice,
+      };
+    });
+
+    return res.json({ cart: cartItems });
   } catch (err) {
     console.error("GET CART ERROR:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
