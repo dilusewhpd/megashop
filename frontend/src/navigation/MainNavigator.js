@@ -45,7 +45,7 @@ function ProfileStack({ setToken }) {
 function CartStack({ token }) {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="CartMain" options={{ title: "Cart" }}>
+      <Stack.Screen name="CartMain" options={{ title: "Cart" , headerShown: false }}>
         {(props) => <CartScreen {...props} token={token} />}
       </Stack.Screen>
       <Stack.Screen
