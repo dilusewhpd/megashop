@@ -20,6 +20,8 @@ import {
   clearCartApi,
 } from "../../api/cartApi";
 
+import { productImages } from "../../utils/imageMapping";
+
 export default function CartScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [status, setStatus] = useState("Loading...");
@@ -34,7 +36,16 @@ export default function CartScreen({ navigation }) {
       }
 
       const res = await getCartApi(token);
-      setItems(res?.cart || []);
+      const cartItems = res?.cart || [];
+
+      // Ensure images are arrays
+      const parsedItems = cartItems.map((item) => ({
+        ...item,
+        images:
+          typeof item.images === "string" ? JSON.parse(item.images) : item.images,
+      }));
+
+      setItems(parsedItems);
       setStatus("");
     } catch (error) {
       console.log("LOAD CART ERROR:", error?.response?.data || error.message);
@@ -42,20 +53,21 @@ export default function CartScreen({ navigation }) {
     }
   };
 
-  // Reload cart whenever screen is focused
   useFocusEffect(
     React.useCallback(() => {
       load();
-    }, [])
+    }, []),
   );
 
-  const total = useMemo(() => {
-    return items.reduce(
-      (sum, item) =>
-        sum + Number(item?.price || 0) * Number(item?.quantity || 0),
-      0
-    );
-  }, [items]);
+  // Total price considering discounts
+  const total = useMemo(
+    () =>
+      items.reduce(
+        (sum, item) => sum + Number(item.finalPrice || 0) * Number(item.quantity || 0),
+        0,
+      ),
+    [items],
+  );
 
   const changeQuantity = async (item, newQty) => {
     if (newQty < 1) return;
@@ -91,42 +103,54 @@ export default function CartScreen({ navigation }) {
     }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      {item?.images ? (
-        <Image source={{ uri: item.images }} style={styles.image} />
-      ) : (
-        <View style={[styles.image, styles.imagePlaceholder]} />
-      )}
+  const renderItem = ({ item }) => {
+    const imageName = item?.images?.[0] || "placeholder.jpeg";
 
-      <View style={{ flex: 1, marginLeft: 10 }}>
-        <Text style={styles.name}>{item?.name}</Text>
-        <Text style={styles.meta}>Rs. {item?.price}</Text>
+    return (
+      <View style={styles.card}>
+        <Image
+          source={productImages[imageName] || productImages["placeholder.jpeg"]}
+          style={styles.image}
+        />
 
-        <View style={styles.qtyRow}>
-          <Pressable
-            style={styles.qtyBtn}
-            onPress={() => changeQuantity(item, item.quantity - 1)}
-          >
-            <Text style={styles.qtyText}>-</Text>
-          </Pressable>
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={styles.name}>{item?.name}</Text>
 
-          <Text style={styles.qtyNumber}>{item?.quantity}</Text>
+          {item.discount > 0 ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={styles.priceFinal}>Rs. {item.finalPrice}</Text>
+              <Text style={styles.priceOriginal}>Rs. {item.original_price}</Text>
+              <Text style={styles.discountText}>-{item.discount}%</Text>
+            </View>
+          ) : (
+            <Text style={styles.meta}>Rs. {item.original_price}</Text>
+          )}
 
-          <Pressable
-            style={styles.qtyBtn}
-            onPress={() => changeQuantity(item, item.quantity + 1)}
-          >
-            <Text style={styles.qtyText}>+</Text>
-          </Pressable>
+          <View style={styles.qtyRow}>
+            <Pressable
+              style={styles.qtyBtn}
+              onPress={() => changeQuantity(item, item.quantity - 1)}
+            >
+              <Text style={styles.qtyText}>-</Text>
+            </Pressable>
+
+            <Text style={styles.qtyNumber}>{item?.quantity}</Text>
+
+            <Pressable
+              style={styles.qtyBtn}
+              onPress={() => changeQuantity(item, item.quantity + 1)}
+            >
+              <Text style={styles.qtyText}>+</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
 
-      <Pressable onPress={() => deleteItem(item)}>
-        <Ionicons name="trash-outline" size={22} color="red" />
-      </Pressable>
-    </View>
-  );
+        <Pressable onPress={() => deleteItem(item)}>
+          <Ionicons name="trash-outline" size={22} color="red" />
+        </Pressable>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
@@ -162,7 +186,7 @@ export default function CartScreen({ navigation }) {
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 120 }} // space for button
+            contentContainerStyle={{ paddingBottom: 120 }}
           />
         )}
       </View>
@@ -175,7 +199,7 @@ export default function CartScreen({ navigation }) {
             if (items.length === 0) {
               Alert.alert("Cart is empty", "Please add items before checkout.");
             } else {
-              navigation.navigate("Checkout", { cartItems: items, total }); // pass data
+              navigation.navigate("Checkout", { cartItems: items, total });
             }
           }}
         >
@@ -206,7 +230,12 @@ const styles = StyleSheet.create({
   },
   summaryText: { fontWeight: "700" },
   status: { marginBottom: 10, color: "#555" },
-  emptyText: { textAlign: "center", marginTop: 40, fontSize: 16, color: "#888" },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 40,
+    fontSize: 16,
+    color: "#888",
+  },
   card: {
     borderWidth: 1,
     borderColor: "#eee",
@@ -218,11 +247,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   image: { width: 70, height: 70, borderRadius: 12 },
-  imagePlaceholder: { backgroundColor: "#eee" },
   name: { fontSize: 15, fontWeight: "800" },
   meta: { marginTop: 4, color: "#555" },
   qtyRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
-  qtyBtn: { backgroundColor: "#111", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  qtyBtn: {
+    backgroundColor: "#111",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
   qtyText: { color: "#fff", fontWeight: "bold" },
   qtyNumber: { marginHorizontal: 12, fontWeight: "700" },
   bottomBar: {
@@ -236,6 +269,22 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: "center",
+  },
+  priceOriginal: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#999",
+    textDecorationLine: "line-through",
+  },
+  priceFinal: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111",
+  },
+  discountText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "red",
   },
   primaryText: { color: "#fff", fontWeight: "800" },
 });
