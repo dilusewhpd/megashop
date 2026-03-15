@@ -11,6 +11,14 @@ import axios from "axios";
 
 const API_BASE = "http://localhost:5000"; // change to your PC IP if testing on phone
 
+// Theme colors
+const PRIMARY = "#2e7d32";    // green theme
+const CARD_BG = "#fff";
+const CARD_BORDER = "#c8e6c9";
+const LABEL_COLOR = "#555";
+const VALUE_COLOR = "#222";
+const BACKGROUND = "#f4fbf4";
+
 export default function OrderDetailsScreen({ route }) {
   const { orderNumber } = route.params;
 
@@ -21,14 +29,9 @@ export default function OrderDetailsScreen({ route }) {
     try {
       const token = await AsyncStorage.getItem("token");
 
-      const res = await axios.get(
-        `${API_BASE}/orders/${orderNumber}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await axios.get(`${API_BASE}/orders/${orderNumber}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       setOrder(res.data.order);
     } catch (err) {
@@ -44,16 +47,16 @@ export default function OrderDetailsScreen({ route }) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#111" />
+      <View style={[styles.center, { backgroundColor: BACKGROUND }]}>
+        <ActivityIndicator size="large" color={PRIMARY} />
       </View>
     );
   }
 
   if (!order) {
     return (
-      <View style={styles.center}>
-        <Text>Order not found.</Text>
+      <View style={[styles.center, { backgroundColor: BACKGROUND }]}>
+        <Text style={{ color: VALUE_COLOR }}>Order not found.</Text>
       </View>
     );
   }
@@ -61,27 +64,24 @@ export default function OrderDetailsScreen({ route }) {
   const shippingAddress = order.shipping_address || {};
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Order Details</Text>
+    <ScrollView contentContainerStyle={[styles.container, { backgroundColor: BACKGROUND }]}>
+      <Text style={[styles.title, { color: PRIMARY }]}>Order Details</Text>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: CARD_BG, borderColor: CARD_BORDER }]}>
         <Row label="Order Number" value={order.order_number} />
         <Row label="Status" value={order.status} />
         <Row label="Total" value={`Rs. ${order.total}`} />
         <Row label="Payment Method" value={order.payment_method} />
-        <Row
-          label="Order Date"
-          value={new Date(order.created_at).toDateString()}
-        />
+        <Row label="Order Date" value={new Date(order.created_at).toDateString()} />
       </View>
 
-      <Text style={styles.sectionTitle}>Shipping Address</Text>
+      <Text style={[styles.sectionTitle, { color: PRIMARY }]}>Shipping Address</Text>
 
-      <View style={styles.card}>
-        <Text>{shippingAddress.name}</Text>
-        <Text>{shippingAddress.email}</Text>
-        <Text>{shippingAddress.phone}</Text>
-        <Text>{shippingAddress.address}</Text>
+      <View style={[styles.card, { backgroundColor: CARD_BG, borderColor: CARD_BORDER }]}>
+        <Text style={{ color: VALUE_COLOR }}>{shippingAddress.name}</Text>
+        <Text style={{ color: VALUE_COLOR }}>{shippingAddress.email}</Text>
+        <Text style={{ color: VALUE_COLOR }}>{shippingAddress.phone}</Text>
+        <Text style={{ color: VALUE_COLOR }}>{shippingAddress.address}</Text>
       </View>
     </ScrollView>
   );
@@ -91,8 +91,8 @@ export default function OrderDetailsScreen({ route }) {
 function Row({ label, value }) {
   return (
     <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+      <Text style={[styles.label, { color: LABEL_COLOR }]}>{label}</Text>
+      <Text style={[styles.value, { color: VALUE_COLOR }]}>{value}</Text>
     </View>
   );
 }
@@ -113,11 +113,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   card: {
-    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#eee",
   },
   row: {
     flexDirection: "row",
@@ -126,7 +124,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: "600",
-    color: "#555",
   },
   value: {
     fontWeight: "700",

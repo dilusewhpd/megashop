@@ -15,12 +15,20 @@ import OrderDetailsScreen from "../screens/orders/OrderDetailsScreen"; // ✅ Im
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+const PRIMARY = "#2e7d32"; // active tab, main green
+const INACTIVE = "#999999"; // inactive tab
+const TAB_BACKGROUND = "#ffffff"; // tab bar background
+const TAB_BORDER = "#c8e6c9"; // tab bar border
 
 // Home stack
 function HomeStack({ token }) {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="HomeMain" component={HomeScreen} options={{ title: "Home" }} />
+      <Stack.Screen
+        name="HomeMain"
+        component={HomeScreen}
+        options={{ title: "Home" }}
+      />
       <Stack.Screen name="ProductDetails">
         {(props) => <ProductDetailsScreen {...props} token={token} />}
       </Stack.Screen>
@@ -35,8 +43,16 @@ function ProfileStack({ setToken }) {
       <Stack.Screen name="ProfileMain" options={{ title: "Profile" }}>
         {(props) => <ProfileScreen {...props} setToken={setToken} />}
       </Stack.Screen>
-      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: "Edit Profile" }} />
-      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: "Change Password" }} />
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ title: "Edit Profile" }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ title: "Change Password" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -45,12 +61,15 @@ function ProfileStack({ setToken }) {
 function CartStack({ token }) {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="CartMain" options={{ title: "Cart" , headerShown: false }}>
+      <Stack.Screen
+        name="CartMain"
+        options={{ title: "Cart", headerShown: false }}
+      >
         {(props) => <CartScreen {...props} token={token} />}
       </Stack.Screen>
       <Stack.Screen
         name="Checkout"
-        component={CheckoutScreen} 
+        component={CheckoutScreen}
         options={{ title: "Checkout" }}
       />
     </Stack.Navigator>
@@ -68,10 +87,7 @@ function OrdersStack() {
         headerTitleStyle: { fontWeight: "700" },
       }}
     >
-      <Stack.Screen
-        name="OrdersMain"
-        options={{ title: "My Orders" }}
-      >
+      <Stack.Screen name="OrdersMain" options={{ title: "My Orders" }}>
         {(props) => <OrdersScreen {...props} />}
       </Stack.Screen>
       <Stack.Screen
@@ -91,14 +107,31 @@ export default function MainNavigator({ token, setToken }) {
         headerShown: false,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName = "ellipse-outline";
-          if (route.name === "Home") iconName = focused ? "home" : "home-outline";
-          if (route.name === "Cart") iconName = focused ? "cart" : "cart-outline";
-          if (route.name === "Orders") iconName = focused ? "receipt" : "receipt-outline";
-          if (route.name === "Profile") iconName = focused ? "person" : "person-outline";
+          if (route.name === "Home")
+            iconName = focused ? "home" : "home-outline";
+          if (route.name === "Cart")
+            iconName = focused ? "cart" : "cart-outline";
+          if (route.name === "Orders")
+            iconName = focused ? "receipt" : "receipt-outline";
+          if (route.name === "Profile")
+            iconName = focused ? "person" : "person-outline";
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: "#111",
-        tabBarInactiveTintColor: "gray",
+        tabBarActiveTintColor: PRIMARY,
+        tabBarInactiveTintColor: INACTIVE,
+        tabBarStyle: {
+          backgroundColor: TAB_BACKGROUND,
+          borderTopColor: TAB_BORDER,
+          borderTopWidth: 1,
+          elevation: 1,
+          shadowColor: "#000",
+          shadowOpacity: 0.05,
+          shadowRadius: 5,
+          shadowOffset: { width: 0, height: -3 },
+          height: 60,
+          paddingBottom: 5,
+          paddingTop: 5,
+        },
       })}
     >
       <Tab.Screen name="Home">{() => <HomeStack token={token} />}</Tab.Screen>

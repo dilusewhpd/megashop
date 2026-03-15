@@ -22,9 +22,17 @@ import {
 
 import { productImages } from "../../utils/imageMapping";
 
+const PRIMARY = "#2e7d32"; // green main accent
+  const LIGHT_GREEN = "#e8f5e9"; // soft green background for cards/inputs
+  const BORDER = "#c8e6c9"; // soft green borders
+  const BACKGROUND = "#f4fbf4"; // screen background
+  const DISCOUNT = "#ef4444"; // red for discounts
+  const INACTIVE = "#999999"; // gray for inactive text
+
 export default function CartScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [status, setStatus] = useState("Loading...");
+  
 
   const load = async () => {
     try {
@@ -42,7 +50,9 @@ export default function CartScreen({ navigation }) {
       const parsedItems = cartItems.map((item) => ({
         ...item,
         images:
-          typeof item.images === "string" ? JSON.parse(item.images) : item.images,
+          typeof item.images === "string"
+            ? JSON.parse(item.images)
+            : item.images,
       }));
 
       setItems(parsedItems);
@@ -58,12 +68,13 @@ export default function CartScreen({ navigation }) {
       load();
     }, []),
   );
-
+  
   // Total price considering discounts
   const total = useMemo(
     () =>
       items.reduce(
-        (sum, item) => sum + Number(item.finalPrice || 0) * Number(item.quantity || 0),
+        (sum, item) =>
+          sum + Number(item.finalPrice || 0) * Number(item.quantity || 0),
         0,
       ),
     [items],
@@ -117,9 +128,13 @@ export default function CartScreen({ navigation }) {
           <Text style={styles.name}>{item?.name}</Text>
 
           {item.discount > 0 ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
               <Text style={styles.priceFinal}>Rs. {item.finalPrice}</Text>
-              <Text style={styles.priceOriginal}>Rs. {item.original_price}</Text>
+              <Text style={styles.priceOriginal}>
+                Rs. {item.original_price}
+              </Text>
               <Text style={styles.discountText}>-{item.discount}%</Text>
             </View>
           ) : (
@@ -153,7 +168,7 @@ export default function CartScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: BACKGROUND }}>
       <View style={{ flex: 1, padding: 14 }}>
         {/* Header */}
         <View style={styles.header}>
@@ -217,18 +232,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  title: { fontSize: 20, fontWeight: "800" },
+  title: { fontSize: 20, fontWeight: "800", color: PRIMARY },
   iconBtn: { padding: 6, borderRadius: 20 },
   summary: {
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: BORDER,
     borderRadius: 14,
     padding: 12,
     marginBottom: 12,
     flexDirection: "row",
     justifyContent: "space-between",
+    backgroundColor: LIGHT_GREEN,
   },
-  summaryText: { fontWeight: "700" },
+  summaryText: { fontWeight: "700", color: PRIMARY },
   status: { marginBottom: 10, color: "#555" },
   emptyText: {
     textAlign: "center",
@@ -238,20 +254,25 @@ const styles = StyleSheet.create({
   },
   card: {
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: BORDER,
     borderRadius: 14,
     padding: 12,
     marginBottom: 10,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   image: { width: 70, height: 70, borderRadius: 12 },
   name: { fontSize: 15, fontWeight: "800" },
   meta: { marginTop: 4, color: "#555" },
   qtyRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
   qtyBtn: {
-    backgroundColor: "#111",
+    backgroundColor: PRIMARY,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
@@ -265,7 +286,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   primaryBtn: {
-    backgroundColor: "#111",
+    backgroundColor: PRIMARY,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: "center",
@@ -273,18 +294,22 @@ const styles = StyleSheet.create({
   priceOriginal: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#999",
+    color: INACTIVE,
     textDecorationLine: "line-through",
   },
   priceFinal: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#111",
+    color: PRIMARY,
   },
   discountText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "red",
+    color: "#fff",
+    backgroundColor: DISCOUNT,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   primaryText: { color: "#fff", fontWeight: "800" },
 });

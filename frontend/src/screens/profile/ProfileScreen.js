@@ -1,9 +1,14 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Alert, Image, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Pressable, Image, ScrollView, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "@react-navigation/native";
+
+const PRIMARY = "#2e7d32";   // main green theme
+const BACKGROUND = "#f4fbf4"; // screen background
+const CARD_BG = "#fff";        // item background
+const DANGER = "#ef4444";      // logout red
 
 export default function ProfileScreen({ navigation, setToken }) {
   const [user, setUser] = useState(null);
@@ -61,31 +66,29 @@ export default function ProfileScreen({ navigation, setToken }) {
 
   if (!user) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: BACKGROUND }]}>
         <Text style={{ color: "#555" }}>Loading profile...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
+    <ScrollView style={[styles.scrollContainer, { backgroundColor: BACKGROUND }]} contentContainerStyle={styles.container}>
       {/* Avatar with edit icon */}
       <View style={styles.avatarWrapper}>
         <Image
-          source={{
-            uri: image ? image : "https://www.w3schools.com/howto/img_avatar.png",
-          }}
+          source={{ uri: image ? image : "https://www.w3schools.com/howto/img_avatar.png" }}
           style={styles.avatarImage}
         />
 
-        {/* Edit Icon protruding */}
+        {/* Edit Icon */}
         <Pressable style={styles.editIcon} onPress={pickImage}>
           <Ionicons name="create-outline" size={20} color="#fff" />
         </Pressable>
       </View>
 
       {/* Name & Email */}
-      <Text style={styles.name}>{user.fullName || user.name}</Text>
+      <Text style={[styles.name, { color: PRIMARY }]}>{user.fullName || user.name}</Text>
       <Text style={styles.email}>{user.email}</Text>
 
       {/* Profile options */}
@@ -95,13 +98,11 @@ export default function ProfileScreen({ navigation, setToken }) {
           label="Edit Profile"
           onPress={() => navigation.navigate("EditProfile")}
         />
-
         <ProfileItem
           icon="lock-closed-outline"
           label="Change Password"
           onPress={() => navigation.navigate("ChangePassword")}
         />
-
         <ProfileItem
           icon="log-out-outline"
           label="Logout"
@@ -115,11 +116,9 @@ export default function ProfileScreen({ navigation, setToken }) {
 
 function ProfileItem({ icon, label, danger, onPress }) {
   return (
-    <Pressable onPress={onPress} style={styles.item}>
-      <Ionicons name={icon} size={22} color={danger ? "#e74c3c" : "#333"} />
-      <Text style={[styles.itemText, { color: danger ? "#e74c3c" : "#333" }]}>
-        {label}
-      </Text>
+    <Pressable onPress={onPress} style={[styles.item, { backgroundColor: CARD_BG }]}>
+      <Ionicons name={icon} size={22} color={danger ? DANGER : "#333"} />
+      <Text style={[styles.itemText, { color: danger ? DANGER : "#333" }]}>{label}</Text>
       <Ionicons name="chevron-forward" size={18} color="#aaa" />
     </Pressable>
   );
@@ -128,7 +127,6 @@ function ProfileItem({ icon, label, danger, onPress }) {
 const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
-    backgroundColor: "#f0f4f8",
   },
 
   container: {
@@ -150,12 +148,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
   },
 
-  // Edit icon protrudes outside the avatar
   editIcon: {
     position: "absolute",
-    bottom: -5, // negative margin to protrude
-    right: -5,  // negative margin to protrude
-    backgroundColor: "#007bff",
+    bottom: -5,
+    right: -5,
+    backgroundColor: PRIMARY,
     padding: 6,
     borderRadius: 20,
     borderWidth: 2,
@@ -167,7 +164,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#333",
+    marginTop: 4,
   },
 
   email: {
@@ -185,9 +182,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderColor: "#e0e0e0",
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 12,
     gap: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
 
   itemText: {

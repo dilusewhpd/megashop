@@ -16,7 +16,11 @@ import { productImages } from "../../utils/imageMapping";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const CARD_MARGIN = 8;
-const CARD_WIDTH = (SCREEN_WIDTH - 16 * 2 - CARD_MARGIN * 2) / 2; 
+const CARD_WIDTH = (SCREEN_WIDTH - 16 * 2 - CARD_MARGIN * 2) / 2;
+const PRIMARY = "#2e7d32";
+const LIGHT_BLUE = "#e8f5e9";    
+const BORDER_BLUE = "#c8e6c9";
+const BACKGROUND = "#f4fbf4";
 
 export default function HomeScreen({ navigation }) {
   const [products, setProducts] = useState([]);
@@ -50,11 +54,13 @@ export default function HomeScreen({ navigation }) {
   useLayoutEffect(() => {
     navigation.setOptions({
       title: "MegaShop",
+      headerStyle: { backgroundColor: PRIMARY },
+      headerTitleStyle: { color: "#fff" },
       headerRight: () => (
         <Ionicons
           name="refresh"
           size={22}
-          color="#111"
+          color="#fff"
           style={{ marginRight: 12 }}
           onPress={load}
         />
@@ -65,7 +71,7 @@ export default function HomeScreen({ navigation }) {
   // Filter products based on search and price
   const filteredProducts = products
     .filter((p) =>
-      (p?.name || "").toLowerCase().includes(query.trim().toLowerCase())
+      (p?.name || "").toLowerCase().includes(query.trim().toLowerCase()),
     )
     .filter((p) => {
       const price = Number(p?.price || 0);
@@ -89,7 +95,9 @@ export default function HomeScreen({ navigation }) {
       >
         <View style={styles.cardRow}>
           <Image
-            source={productImages[imageName] || productImages["placeholder.jpeg"]}
+            source={
+              productImages[imageName] || productImages["placeholder.jpeg"]
+            }
             style={styles.productImageLeft}
           />
 
@@ -100,25 +108,33 @@ export default function HomeScreen({ navigation }) {
 
             {/* Show discount if exists */}
             {discount > 0 ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={styles.priceFinal}>Rs. {finalPrice.toFixed(2)}</Text>
-                <Text style={styles.priceOriginal}>Rs. {originalPrice.toFixed(2)}</Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Text style={styles.priceFinal}>
+                  Rs. {finalPrice.toFixed(2)}
+                </Text>
+                <Text style={styles.priceOriginal}>
+                  Rs. {originalPrice.toFixed(2)}
+                </Text>
                 <Text style={styles.discountText}>-{discount}%</Text>
               </View>
             ) : (
-              <Text style={styles.priceFinal}>Rs. {originalPrice.toFixed(2)}</Text>
+              <Text style={styles.priceFinal}>
+                Rs. {originalPrice.toFixed(2)}
+              </Text>
             )}
 
             <View style={styles.metaRow}>
               <View style={styles.pill}>
-                <Ionicons name="star" size={14} color="#111" />
+                <Ionicons name="star" size={14} color={PRIMARY} />
                 <Text style={styles.pillText}>
                   {item.rating ?? "-"} ({item.review_count ?? 0})
                 </Text>
               </View>
 
               <View style={styles.pill}>
-                <Ionicons name="cube" size={14} color="#111" />
+                <Ionicons name="cube" size={14} color={PRIMARY} />
                 <Text style={styles.pillText}>In stock</Text>
               </View>
             </View>
@@ -132,7 +148,12 @@ export default function HomeScreen({ navigation }) {
     <View style={styles.container}>
       {/* SEARCH BAR */}
       <View style={styles.searchBox}>
-        <Ionicons name="search" size={18} color="#777" style={{ marginRight: 8 }} />
+        <Ionicons
+          name="search"
+          size={18}
+          color="#777"
+          style={{ marginRight: 8 }}
+        />
         <TextInput
           placeholder="Search products..."
           placeholderTextColor="#999"
@@ -150,10 +171,26 @@ export default function HomeScreen({ navigation }) {
           contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
           style={{ maxHeight: 50 }}
         >
-          <Chip label="All" active={priceFilter === "ALL"} onPress={() => setPriceFilter("ALL")} />
-          <Chip label="Under 2000" active={priceFilter === "LT2000"} onPress={() => setPriceFilter("LT2000")} />
-          <Chip label="2000 - 5000" active={priceFilter === "BTW2000_5000"} onPress={() => setPriceFilter("BTW2000_5000")} />
-          <Chip label="Above 5000" active={priceFilter === "GT5000"} onPress={() => setPriceFilter("GT5000")} />
+          <Chip
+            label="All"
+            active={priceFilter === "ALL"}
+            onPress={() => setPriceFilter("ALL")}
+          />
+          <Chip
+            label="Under 2000"
+            active={priceFilter === "LT2000"}
+            onPress={() => setPriceFilter("LT2000")}
+          />
+          <Chip
+            label="2000 - 5000"
+            active={priceFilter === "BTW2000_5000"}
+            onPress={() => setPriceFilter("BTW2000_5000")}
+          />
+          <Chip
+            label="Above 5000"
+            active={priceFilter === "GT5000"}
+            onPress={() => setPriceFilter("GT5000")}
+          />
         </ScrollView>
       </View>
 
@@ -165,10 +202,9 @@ export default function HomeScreen({ navigation }) {
           data={filteredProducts}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
+          numColumns={1}
           showsVerticalScrollIndicator={false}
-          columnWrapperStyle={{ justifyContent: "space-between", paddingHorizontal: 16, marginBottom: 12 }}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
         />
       )}
     </View>
@@ -178,49 +214,102 @@ export default function HomeScreen({ navigation }) {
 // CHIP COMPONENT
 function Chip({ label, active, onPress }) {
   return (
-    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      style={[styles.chip, active && styles.chipActive]}
+    >
+      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: BACKGROUND },
   searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 30,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginHorizontal: 16,
-    marginTop: 10,
-    backgroundColor: "#fafafa",
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  borderRadius: 30,
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  marginHorizontal: 16,
+  marginTop: 12,
+  backgroundColor:LIGHT_BLUE,
+
+   // SHADOW for iOS
+  shadowColor: "#000",
+  shadowOpacity: 0.1,
+  shadowRadius: 6,
+  shadowOffset: { width: 0, height: 3 },
+
+  // SHADOW for Android
+  elevation: 3,
+},
   searchInput: { flex: 1, fontSize: 14 },
   filterSection: { marginTop: 12, marginBottom: 16 },
   card: {
-    width: CARD_WIDTH,
-    backgroundColor: "#fff",
+    width: "100%",
+    backgroundColor: "#ffffff",
     borderRadius: 16,
-    padding: 12,
-    marginBottom: 8,
+    padding: 14,
+    marginBottom: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: BORDER_BLUE,
   },
-  cardRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  productImageLeft: { width: 80, height: 80, resizeMode: "contain", borderRadius: 8 },
+  cardRow: { flexDirection: "row", alignItems: "center" ,gap: 25},
+  productImageLeft: {
+    width: 90,
+    height: 90,
+    resizeMode: "cover ",
+    borderRadius: 12,
+    backgroundColor: "#f3f3f3",
+  },
   cardInfo: { flex: 1 },
-  name: { fontSize: 16, fontWeight: "800" },
-  priceOriginal: { fontSize: 12, fontWeight: "600", color: "#999", textDecorationLine: "line-through" },
-  priceFinal: { fontSize: 14, fontWeight: "700", color: "#111" },
-  discountText: { fontSize: 12, fontWeight: "700", color: "red" },
+  name: { fontSize: 16, fontWeight: "800", color: "#222", marginBottom: 4 },
+  priceOriginal: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#999",
+    textDecorationLine: "line-through",
+  },
+  priceFinal: { fontSize: 13, fontWeight: "700", color: PRIMARY },
+  discountText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#fff",
+    backgroundColor: "#ef4444",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
   metaRow: { flexDirection: "row", gap: 8, marginTop: 8 },
-  pill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: "#eee" },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#f6f6f6",
+  },
   pillText: { fontWeight: "700", color: "#333", fontSize: 12 },
-  chip: { paddingHorizontal: 14, height: 34, justifyContent: "center", borderRadius: 18, borderWidth: 1, borderColor: "#e5e5e5", marginRight: 10, backgroundColor: "#f5f5f5" },
-  chipActive: { backgroundColor: "#111", borderColor: "#111" },
+  chip: {
+    paddingHorizontal: 14,
+    height: 34,
+    justifyContent: "center",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: BORDER_BLUE,
+    marginRight: 10,
+    backgroundColor: "#f1f8f1",
+  },
+  chipActive: { backgroundColor: PRIMARY , borderColor: PRIMARY },
   chipText: { fontSize: 12, fontWeight: "600", color: "#555" },
   chipTextActive: { color: "#fff" },
   status: { textAlign: "center", marginTop: 20, color: "#555" },

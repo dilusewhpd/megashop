@@ -80,37 +80,43 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: "center",
+    backgroundColor: "#f4fbf4", // HomeScreen BACKGROUND
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
     textAlign: "center",
+    color: "#222", // HomeScreen dark title color
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#c8e6c9", // HomeScreen BORDER_BLUE
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
+    backgroundColor: "#e8f5e9", // HomeScreen LIGHT_BLUE
+    color: "#222", // text color for input
   },
   button: {
-    backgroundColor: "#111",
+    backgroundColor: "#2e7d32", // HomeScreen PRIMARY
     padding: 14,
     borderRadius: 8,
     alignItems: "center",
   },
   buttonText: {
-    color: "#fff",
+    color: "#fff", // white text
     fontWeight: "bold",
   },
   message: {
     marginTop: 15,
     textAlign: "center",
+    color: "#555", // similar to HomeScreen text
   },
   link: {
     marginTop: 15,
     textAlign: "center",
-    color: "blue",
+    color: "#2e7d32", // HomeScreen PRIMARY green
+    fontWeight: "600",
   },
 });
