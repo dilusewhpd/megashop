@@ -24,7 +24,7 @@ const ERROR_COLOR = "#ef4444";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
 export default function CheckoutScreen({ navigation, route }) {
-  const { cartItems = [] } = route.params;
+  const { cartItems = [], total: totalFromCart = 0 } = route.params; // 🔹 receive final total from CartScreen
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -60,16 +60,24 @@ export default function CheckoutScreen({ navigation, route }) {
       totalItems,
       fullPrice: +fullPrice.toFixed(2),
       totalDiscount: +totalDiscount.toFixed(2),
-      finalTotal: +finalTotal.toFixed(2),
+      finalTotal: totalFromCart || +finalTotal.toFixed(2), // 🔹 use total from CartScreen
     };
-  }, [cartItems]);
+  }, [cartItems, totalFromCart]);
 
   // Show toast at top for 3s
   const showToast = (msg) => {
     setToastMessage(msg);
-    Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
     setTimeout(() => {
-      Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
         setToastMessage("");
       });
     }, 3000);
@@ -87,7 +95,8 @@ export default function CheckoutScreen({ navigation, route }) {
     if (!tPhone) return showToast("Please enter your phone number.") || false;
     if (tPhone.replace(/\D/g, "").length !== 10)
       return showToast("Phone number must be exactly 10 digits.") || false;
-    if (!tAddress) return showToast("Please enter your delivery address.") || false;
+    if (!tAddress)
+      return showToast("Please enter your delivery address.") || false;
 
     return true;
   };
@@ -105,11 +114,12 @@ export default function CheckoutScreen({ navigation, route }) {
       const itemsForBackend = cartItems.map((item) => {
         const price = Number(item.original_price || item.price || 0);
         const discount = Number(item.discount || 0);
-        const finalPricePerUnit = +(price - (price * discount) / 100).toFixed(2);
+        const discountedPrice = +(price - (price * discount) / 100).toFixed(2);
+
         return {
           product_id: item.product_id,
           quantity: Number(item.quantity),
-          price: finalPricePerUnit,
+          price: discountedPrice,
         };
       });
 
@@ -119,28 +129,29 @@ export default function CheckoutScreen({ navigation, route }) {
           paymentMethod: "ONLINE",
           shippingAddress: { name, email, phone, address },
           items: itemsForBackend,
+          totalAmount: orderSummary.finalTotal, // 🔹 send final total with promo
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       const orderNumber = orderRes.data.orderNumber;
 
-      // Create payment via backend (backend will calculate total)
+      // Create payment via backend
       const payRes = await axios.post(
         `${API_BASE}/payment/create`,
         { orderNumber },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      if (!payRes.data) return showToast("Failed to create PayHere payment.") || false;
+      if (!payRes.data)
+        return showToast("Failed to create PayHere payment.") || false;
 
       await axios.patch(
         `${API_BASE}/orders/${orderNumber}/pay`,
         { status: "Paid" },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      // ✅ Use backend-calculated amount ONLY
       redirectToPayHere(payRes.data);
     } catch (err) {
       console.log("CHECKOUT ERROR:", err.response?.data || err.message);
@@ -155,7 +166,6 @@ export default function CheckoutScreen({ navigation, route }) {
     form.method = "POST";
     form.action = "https://sandbox.payhere.lk/pay/checkout";
 
-    // 🔹 ONLY use backend-provided amount
     Object.entries(paymentData).forEach(([key, value]) => {
       const input = document.createElement("input");
       input.type = "hidden";
@@ -185,7 +195,10 @@ export default function CheckoutScreen({ navigation, route }) {
         </Animated.View>
       ) : null}
 
-      <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={{ padding: 16 }}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Order Summary */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Order Summary</Text>
@@ -199,12 +212,19 @@ export default function CheckoutScreen({ navigation, route }) {
           </View>
           <View style={styles.summaryRow}>
             <Text>Discount</Text>
-            <Text style={styles.discount}>- Rs. {orderSummary.totalDiscount}</Text>
+            <Text style={styles.discount}>
+              - Rs. {orderSummary.totalDiscount}
+            </Text>
           </View>
           <View
             style={[
               styles.summaryRow,
-              { borderTopWidth: 1, borderTopColor: BORDER_COLOR, marginTop: 8, paddingTop: 8 },
+              {
+                borderTopWidth: 1,
+                borderTopColor: BORDER_COLOR,
+                marginTop: 8,
+                paddingTop: 8,
+              },
             ]}
           >
             <Text style={styles.finalTotal}>Total</Text>
@@ -250,8 +270,16 @@ export default function CheckoutScreen({ navigation, route }) {
             onFocus={() => setFocusedField("address")}
             onBlur={() => setFocusedField("")}
           />
-          <Pressable style={styles.button} onPress={handleCheckout} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Pay with PayHere</Text>}
+          <Pressable
+            style={styles.button}
+            onPress={handleCheckout}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Pay with PayHere</Text>
+            )}
           </Pressable>
         </View>
       </ScrollView>
@@ -273,12 +301,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER_COLOR,
   },
-  cardTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12, color: PRIMARY },
-  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+    color: PRIMARY,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
   discount: { color: ERROR_COLOR, fontWeight: "700" },
   finalTotal: { fontSize: 16, fontWeight: "800", color: PRIMARY },
-  input: { backgroundColor: "#fff", paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14, marginBottom: 12, fontSize: 16, borderWidth: 1, borderColor: BORDER_COLOR },
-  button: { backgroundColor: PRIMARY, paddingVertical: 16, borderRadius: 14, alignItems: "center", marginTop: 10 },
+  input: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    marginBottom: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+  },
+  button: {
+    backgroundColor: PRIMARY,
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: "center",
+    marginTop: 10,
+  },
   buttonText: { color: "#fff", fontWeight: "800", fontSize: 16 },
   toast: {
     position: "absolute",

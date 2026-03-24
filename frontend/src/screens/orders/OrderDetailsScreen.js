@@ -1,29 +1,39 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useLayoutEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
   ScrollView,
+  Pressable,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { Ionicons } from "@expo/vector-icons";
 
-const API_BASE = "http://localhost:5000"; // change to your PC IP if testing on phone
+const API_BASE = "http://localhost:5000";
 
-// Theme colors
-const PRIMARY = "#2e7d32";    // green theme
+// Theme
+const PRIMARY = "#2e7d32";
+const BACKGROUND = "#f4fbf4";
 const CARD_BG = "#fff";
 const CARD_BORDER = "#c8e6c9";
-const LABEL_COLOR = "#555";
-const VALUE_COLOR = "#222";
-const BACKGROUND = "#f4fbf4";
 
-export default function OrderDetailsScreen({ route }) {
+export default function OrderDetailsScreen({ route, navigation }) {
   const { orderNumber } = route.params;
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // ✅ Custom Header (like HomeScreen)
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: "Order Details",
+      headerStyle: { backgroundColor: PRIMARY },
+      headerTitleStyle: { color: "#fff" },
+      headerTintColor: "#fff",
+    });
+  }, [navigation]);
 
   const loadOrderDetails = async () => {
     try {
@@ -56,7 +66,7 @@ export default function OrderDetailsScreen({ route }) {
   if (!order) {
     return (
       <View style={[styles.center, { backgroundColor: BACKGROUND }]}>
-        <Text style={{ color: VALUE_COLOR }}>Order not found.</Text>
+        <Text>Order not found.</Text>
       </View>
     );
   }
@@ -64,73 +74,91 @@ export default function OrderDetailsScreen({ route }) {
   const shippingAddress = order.shipping_address || {};
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { backgroundColor: BACKGROUND }]}>
-      <Text style={[styles.title, { color: PRIMARY }]}>Order Details</Text>
-
+    <ScrollView
+      contentContainerStyle={[styles.container, { backgroundColor: BACKGROUND }]}
+    >
+      {/* ORDER SUMMARY CARD */}
       <View style={[styles.card, { backgroundColor: CARD_BG, borderColor: CARD_BORDER }]}>
+        <Text style={styles.sectionTitle}>Order Summary</Text>
+
         <Row label="Order Number" value={order.order_number} />
         <Row label="Status" value={order.status} />
         <Row label="Total" value={`Rs. ${order.total}`} />
         <Row label="Payment Method" value={order.payment_method} />
-        <Row label="Order Date" value={new Date(order.created_at).toDateString()} />
+        <Row
+          label="Order Date"
+          value={new Date(order.created_at).toDateString()}
+        />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: PRIMARY }]}>Shipping Address</Text>
-
+      {/* SHIPPING ADDRESS */}
       <View style={[styles.card, { backgroundColor: CARD_BG, borderColor: CARD_BORDER }]}>
-        <Text style={{ color: VALUE_COLOR }}>{shippingAddress.name}</Text>
-        <Text style={{ color: VALUE_COLOR }}>{shippingAddress.email}</Text>
-        <Text style={{ color: VALUE_COLOR }}>{shippingAddress.phone}</Text>
-        <Text style={{ color: VALUE_COLOR }}>{shippingAddress.address}</Text>
+        <Text style={styles.sectionTitle}>Shipping Address</Text>
+
+        <Text style={styles.text}>{shippingAddress.name}</Text>
+        <Text style={styles.text}>{shippingAddress.email}</Text>
+        <Text style={styles.text}>{shippingAddress.phone}</Text>
+        <Text style={styles.text}>{shippingAddress.address}</Text>
       </View>
     </ScrollView>
   );
 }
 
-// 🎯 Reusable Row Component
+// Reusable Row
 function Row({ label, value }) {
   return (
     <View style={styles.row}>
-      <Text style={[styles.label, { color: LABEL_COLOR }]}>{label}</Text>
-      <Text style={[styles.value, { color: VALUE_COLOR }]}>{value}</Text>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    padding: 16,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "800",
-    marginBottom: 20,
+
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    marginTop: 20,
-    marginBottom: 10,
-  },
+
   card: {
     padding: 16,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
+    marginBottom: 16,
+    elevation: 3,
   },
+
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    marginBottom: 12,
+    color: PRIMARY,
+  },
+
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 10,
   },
+
   label: {
     fontWeight: "600",
+    color: "#555",
   },
+
   value: {
     fontWeight: "700",
+    color: "#222",
   },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+
+  text: {
+    color: "#222",
+    marginBottom: 6,
+    fontWeight: "500",
   },
 });

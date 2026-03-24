@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = "http://localhost:5000"; 
+const API_BASE = "http://192.168.8.167:5000"; 
 
 export const checkoutOrderApi = async (token) => {
   return axios.post(
