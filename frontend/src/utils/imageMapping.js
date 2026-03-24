@@ -13,3 +13,10 @@ export const productImages = {
   "SoftCottonT-Shirt.jpeg": require("../assets/images/SoftCottonT-Shirt.jpeg"),
   "SSDStorage.jpeg": require("../assets/images/SSDStorage.jpeg"),
 };
+
+export const promoImages = {
+  "50-discount": require("../assets/images/50-discount.jpg"),
+  "20-discount": require("../assets/images/20-discount.jpg"),
+  "10-discount": require("../assets/images/10-discount.jpg"),
+  "5-discount": require("../assets/images/5-discount.jpg"),
+};
