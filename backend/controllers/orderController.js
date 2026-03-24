@@ -154,3 +154,29 @@ exports.updateOrderStatus = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+// DELETE /orders/by-number/:orderNumber
+exports.deleteOrderByNumber = async (req, res) => {
+  try {
+    console.log("🔥 DELETE API HIT"); // ✅ ADD
+
+    const userId = req.user.userId;
+    const { orderNumber } = req.params;
+
+    console.log("OrderNumber:", orderNumber); // ✅ ADD
+
+    const [result] = await db.query(
+      "DELETE FROM orders WHERE order_number = ? AND user_id = ?",
+      [orderNumber, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    return res.json({ message: "Order deleted successfully ✅" });
+  } catch (err) {
+    console.error("DELETE ORDER ERROR:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
