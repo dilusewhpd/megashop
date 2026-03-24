@@ -59,3 +59,24 @@ export const clearCartApi = async (token) => {
 
   return res.data;
 };
+
+// New API for applying promo code
+export const applyPromoApi = async (code, token) => {
+  const res = await axios.post(
+    `${API}/cart/apply-promo`,
+    { code },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
+};
+
+// New API for fetching active promo banners
+export const getPromoBannersApi = async (token) => {
+  const res = await axios.get(`${API}/cart/promos`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return res.data.promos;
+};
