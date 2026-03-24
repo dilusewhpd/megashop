@@ -1,18 +1,37 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Image, ScrollView, Alert } from "react-native";
+import React, { useState, useLayoutEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Image,
+  ScrollView,
+  Alert,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "@react-navigation/native";
 
-const PRIMARY = "#2e7d32";   // main green theme
-const BACKGROUND = "#f4fbf4"; // screen background
-const CARD_BG = "#fff";        // item background
-const DANGER = "#ef4444";      // logout red
+const PRIMARY = "#2e7d32";
+const BACKGROUND = "#f4fbf4";
+const CARD_BG = "#fff";
+const BORDER = "#c8e6c9";
+const DANGER = "#ef4444";
 
 export default function ProfileScreen({ navigation, setToken }) {
   const [user, setUser] = useState(null);
   const [image, setImage] = useState(null);
+
+  // ✅ Header like HomeScreen (no back arrow)
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: "Profile",
+      headerStyle: { backgroundColor: PRIMARY },
+      headerTitleStyle: { color: "#fff" },
+      headerTintColor: "#fff",
+    });
+  }, [navigation]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -45,54 +64,71 @@ export default function ProfileScreen({ navigation, setToken }) {
     }
   };
 
+  // ✅ FIXED LOGOUT
   const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-            await AsyncStorage.removeItem("token");
-            await AsyncStorage.removeItem("user");
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await AsyncStorage.multiRemove(["token", "user"]);
+
+            // update global auth state
             if (setToken) setToken(null);
-          },
+
+            // reset navigation stack (important fix)
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Login" }],
+            });
+          } catch (err) {
+            console.log("Logout error:", err);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (!user) {
     return (
-      <View style={[styles.container, { backgroundColor: BACKGROUND }]}>
+      <View style={[styles.center, { backgroundColor: BACKGROUND }]}>
         <Text style={{ color: "#555" }}>Loading profile...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={[styles.scrollContainer, { backgroundColor: BACKGROUND }]} contentContainerStyle={styles.container}>
-      {/* Avatar with edit icon */}
-      <View style={styles.avatarWrapper}>
-        <Image
-          source={{ uri: image ? image : "https://www.w3schools.com/howto/img_avatar.png" }}
-          style={styles.avatarImage}
-        />
+    <ScrollView
+      style={{ backgroundColor: BACKGROUND }}
+      contentContainerStyle={styles.container}
+    >
+      {/* PROFILE CARD */}
+      <View style={styles.profileCard}>
+        <View style={styles.avatarWrapper}>
+          <Image
+            source={{
+              uri: image
+                ? image
+                : "https://www.w3schools.com/howto/img_avatar.png",
+            }}
+            style={styles.avatarImage}
+          />
 
-        {/* Edit Icon */}
-        <Pressable style={styles.editIcon} onPress={pickImage}>
-          <Ionicons name="create-outline" size={20} color="#fff" />
-        </Pressable>
+          <Pressable style={styles.editIcon} onPress={pickImage}>
+            <Ionicons name="create-outline" size={18} color="#fff" />
+          </Pressable>
+        </View>
+
+        <Text style={styles.name}>
+          {user.fullName || user.name}
+        </Text>
+        <Text style={styles.email}>{user.email}</Text>
       </View>
 
-      {/* Name & Email */}
-      <Text style={[styles.name, { color: PRIMARY }]}>{user.fullName || user.name}</Text>
-      <Text style={styles.email}>{user.email}</Text>
-
-      {/* Profile options */}
-      <View style={styles.section}>
+      {/* OPTIONS CARD */}
+      <View style={styles.card}>
         <ProfileItem
           icon="create-outline"
           label="Edit Profile"
@@ -114,83 +150,94 @@ export default function ProfileScreen({ navigation, setToken }) {
   );
 }
 
+// Reusable item
 function ProfileItem({ icon, label, danger, onPress }) {
   return (
-    <Pressable onPress={onPress} style={[styles.item, { backgroundColor: CARD_BG }]}>
+    <Pressable style={styles.item} onPress={onPress}>
       <Ionicons name={icon} size={22} color={danger ? DANGER : "#333"} />
-      <Text style={[styles.itemText, { color: danger ? DANGER : "#333" }]}>{label}</Text>
+      <Text style={[styles.itemText, { color: danger ? DANGER : "#333" }]}>
+        {label}
+      </Text>
       <Ionicons name="chevron-forward" size={18} color="#aaa" />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flex: 1,
+  container: {
+    padding: 16,
   },
 
-  container: {
+  center: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    paddingTop: 60,
-    paddingBottom: 40,
+  },
+
+  profileCard: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: BORDER,
+    elevation: 3,
   },
 
   avatarWrapper: {
-    width: 120,
-    height: 120,
-    marginBottom: 16,
+    width: 110,
+    height: 110,
+    marginBottom: 12,
   },
 
   avatarImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     backgroundColor: "#ddd",
   },
 
   editIcon: {
     position: "absolute",
-    bottom: -5,
-    right: -5,
+    bottom: 0,
+    right: 0,
     backgroundColor: PRIMARY,
     padding: 6,
     borderRadius: 20,
     borderWidth: 2,
     borderColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
   },
 
   name: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginTop: 4,
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#222",
   },
 
   email: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#555",
     marginTop: 4,
   },
 
-  section: {
-    marginTop: 30,
-    width: "90%",
+  card: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: BORDER,
+    elevation: 3,
   },
 
   item: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
     gap: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
   },
 
   itemText: {
