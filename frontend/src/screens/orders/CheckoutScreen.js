@@ -24,7 +24,11 @@ const ERROR_COLOR = "#ef4444";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
 export default function CheckoutScreen({ navigation, route }) {
-  const { cartItems = [], total: totalFromCart = 0 } = route.params; // 🔹 receive final total from CartScreen
+  const {
+    cartItems = [],
+    total: totalFromCart = 0,
+    promoDiscount = 0, // 🔹 receive promo discount from CartScreen
+  } = route.params; // 🔹 receive final total from CartScreen
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -39,30 +43,21 @@ export default function CheckoutScreen({ navigation, route }) {
 
   // Order summary
   const orderSummary = useMemo(() => {
-    let totalItems = 0,
-      fullPrice = 0,
-      totalDiscount = 0,
-      finalTotal = 0;
+    let totalItems = 0;
 
     cartItems.forEach((item) => {
-      const quantity = Number(item.quantity || 0);
-      const price = Number(item.original_price || item.price || 0);
-      const discount = Number(item.discount || 0);
-      const discountedPrice = +(price - (price * discount) / 100).toFixed(2);
-
-      totalItems += quantity;
-      fullPrice += price * quantity;
-      totalDiscount += +(price - discountedPrice) * quantity;
-      finalTotal += discountedPrice * quantity;
+      totalItems += Number(item.quantity || 0);
     });
+
+    const finalTotal = Number(totalFromCart || 0);
 
     return {
       totalItems,
-      fullPrice: +fullPrice.toFixed(2),
-      totalDiscount: +totalDiscount.toFixed(2),
-      finalTotal: totalFromCart || +finalTotal.toFixed(2), // 🔹 use total from CartScreen
+      fullPrice: finalTotal + Number(promoDiscount || 0), // ✅ key fix
+      promoDiscount: Number(promoDiscount || 0),
+      finalTotal: finalTotal,
     };
-  }, [cartItems, totalFromCart]);
+  }, [cartItems, totalFromCart, promoDiscount]);
 
   // Show toast at top for 3s
   const showToast = (msg) => {
@@ -112,14 +107,10 @@ export default function CheckoutScreen({ navigation, route }) {
 
       // Send cart items to backend for checkout
       const itemsForBackend = cartItems.map((item) => {
-        const price = Number(item.original_price || item.price || 0);
-        const discount = Number(item.discount || 0);
-        const discountedPrice = +(price - (price * discount) / 100).toFixed(2);
-
         return {
           product_id: item.product_id,
           quantity: Number(item.quantity),
-          price: discountedPrice,
+          price: Number(item.finalPrice), // ✅ already discounted product price
         };
       });
 
@@ -210,27 +201,32 @@ export default function CheckoutScreen({ navigation, route }) {
             <Text>Full Price</Text>
             <Text>Rs. {orderSummary.fullPrice}</Text>
           </View>
-          <View style={styles.summaryRow}>
-            <Text>Discount</Text>
-            <Text style={styles.discount}>
-              - Rs. {orderSummary.totalDiscount}
-            </Text>
+          {orderSummary.promoDiscount > 0 && (
+            <View style={styles.summaryRow}>
+              <Text>Promo Discount</Text>
+              <Text style={styles.discount}>
+                - Rs. {orderSummary.promoDiscount}
+              </Text>
+            </View>
+          )}
           </View>
-          <View
-            style={[
-              styles.summaryRow,
-              {
-                borderTopWidth: 1,
-                borderTopColor: BORDER_COLOR,
-                marginTop: 8,
-                paddingTop: 8,
-              },
-            ]}
-          >
-            <Text style={styles.finalTotal}>Total</Text>
-            <Text style={styles.finalTotal}>Rs. {orderSummary.finalTotal}</Text>
-          </View>
-        </View>
+    <View
+
+  style={[
+    styles.summaryRow,
+    {
+      borderTopWidth: 1,
+      borderTopColor: BORDER_COLOR,
+      marginTop: 8,
+      paddingTop: 8,
+    },
+  ]}
+>
+  <Text style={styles.finalTotal}>Total</Text>
+  <Text style={styles.finalTotal}>
+    Rs. {orderSummary.finalTotal}
+  </Text>
+</View>
 
         {/* Delivery Details */}
         <View style={styles.card}>

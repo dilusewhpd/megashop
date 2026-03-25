@@ -272,6 +272,7 @@ export default function CartScreen({ navigation }) {
               navigation.navigate("Checkout", {
                 cartItems: items,
                 total: finalTotal,
+                promoDiscount: discount,
               });
             }
           }}
