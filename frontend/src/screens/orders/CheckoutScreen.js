@@ -105,32 +105,26 @@ export default function CheckoutScreen({ navigation, route }) {
       const token = await AsyncStorage.getItem("token");
       if (!token) return showToast("Please login first.") || false;
 
-      // Send cart items to backend for checkout
-      const itemsForBackend = cartItems.map((item) => {
-        return {
-          product_id: item.product_id,
-          quantity: Number(item.quantity),
-          price: Number(item.finalPrice), // ✅ already discounted product price
-        };
-      });
+      // Send promoCode instead of totalAmount
+      // After checkout
+      // 🔹 send final total along with promoCode
+const orderRes = await axios.post(
+  `${API_BASE}/orders/checkout`,
+  {
+    paymentMethod: "ONLINE",
+    shippingAddress: { name, email, phone, address },
+    promoCode: route.params.promoCode || null,
+    totalAmount: orderSummary.finalTotal, // 🔹 pass final total
+  },
+  { headers: { Authorization: `Bearer ${token}` } },
+);
 
-      const orderRes = await axios.post(
-        `${API_BASE}/orders/checkout`,
-        {
-          paymentMethod: "ONLINE",
-          shippingAddress: { name, email, phone, address },
-          items: itemsForBackend,
-          totalAmount: orderSummary.finalTotal, // 🔹 send final total with promo
-        },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const { orderNumber, total } = orderRes.data;
 
-      const orderNumber = orderRes.data.orderNumber;
-
-      // Create payment via backend
+      // Send total to backend payment creation
       const payRes = await axios.post(
         `${API_BASE}/payment/create`,
-        { orderNumber },
+        { orderNumber, amount: total }, // 🔹 pass total
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
@@ -209,24 +203,21 @@ export default function CheckoutScreen({ navigation, route }) {
               </Text>
             </View>
           )}
-          </View>
-    <View
-
-  style={[
-    styles.summaryRow,
-    {
-      borderTopWidth: 1,
-      borderTopColor: BORDER_COLOR,
-      marginTop: 8,
-      paddingTop: 8,
-    },
-  ]}
->
-  <Text style={styles.finalTotal}>Total</Text>
-  <Text style={styles.finalTotal}>
-    Rs. {orderSummary.finalTotal}
-  </Text>
-</View>
+        </View>
+        <View
+          style={[
+            styles.summaryRow,
+            {
+              borderTopWidth: 1,
+              borderTopColor: BORDER_COLOR,
+              marginTop: 8,
+              paddingTop: 8,
+            },
+          ]}
+        >
+          <Text style={styles.finalTotal}>Total</Text>
+          <Text style={styles.finalTotal}>Rs. {orderSummary.finalTotal}</Text>
+        </View>
 
         {/* Delivery Details */}
         <View style={styles.card}>

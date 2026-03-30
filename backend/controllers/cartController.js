@@ -149,7 +149,7 @@ exports.applyPromo = async (req, res) => {
 
     if (!code) return res.status(400).json({ message: "Promo code is required" });
 
-    const [promoRows] = await db.query("SELECT * FROM promo_codes WHERE code = ? AND active = 1", [code]);
+    const [promoRows] = await db.query("SELECT * FROM promo_codes WHERE code = ? AND is_active = 1", [code]);
     if (promoRows.length === 0) return res.status(400).json({ success: false, message: "Invalid promo code" });
 
     const promo = promoRows[0];
@@ -210,7 +210,7 @@ exports.getPromoBanners = async (req, res) => {
         min_order_amount,
         image_url
        FROM promo_codes
-       WHERE active = 1
+       WHERE is_active = 1
        ORDER BY id DESC`
     );
 
