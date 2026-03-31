@@ -21,7 +21,7 @@ const BORDER_COLOR = "#c8e6c9";
 const BACKGROUND = "#f4fbf4";
 
 export default function EditProfileScreen({ navigation, route }) {
-  const { onProfileUpdate } = route.params || {}; // ✅ callback
+  const { onProfileUpdate } = route.params || {};
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [image, setImage] = useState(null);
@@ -60,7 +60,6 @@ export default function EditProfileScreen({ navigation, route }) {
           await AsyncStorage.setItem("profileImage", res.data.profileImage);
         }
 
-        // ✅ Update ProfileScreen instantly
         if (onProfileUpdate) {
           onProfileUpdate(updatedUser, res.data.profileImage || image);
         }
@@ -93,7 +92,9 @@ export default function EditProfileScreen({ navigation, route }) {
     if (!image) return;
     const storedToken = await AsyncStorage.getItem("token");
     if (!storedToken) return alert("You are not logged in!");
-    const confirmDelete = window.confirm("Are you sure you want to delete your profile image?");
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete your profile image?"
+    );
     if (!confirmDelete) return;
 
     try {
@@ -101,7 +102,6 @@ export default function EditProfileScreen({ navigation, route }) {
       setImage(null);
       await AsyncStorage.removeItem("profileImage");
 
-      // ✅ Update ProfileScreen instantly
       if (onProfileUpdate) {
         const storedUser = JSON.parse(await AsyncStorage.getItem("user")) || {};
         onProfileUpdate(storedUser, null);
@@ -139,20 +139,31 @@ export default function EditProfileScreen({ navigation, route }) {
 
       {/* PROFILE FORM */}
       <View style={styles.card}>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Name"
-          placeholderTextColor="#777"
-        />
-        <TextInput
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Email"
-          placeholderTextColor="#777"
-        />
+        {/* NAME FIELD */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Enter your name"
+            placeholderTextColor="#bbb"
+          />
+        </View>
+
+        {/* EMAIL FIELD */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Enter your email"
+            placeholderTextColor="#bbb"
+            keyboardType="email-address"
+          />
+        </View>
+
         <Pressable style={[styles.button, { backgroundColor: PRIMARY }]} onPress={saveProfile}>
           <Text style={styles.buttonText}>Save</Text>
         </Pressable>
@@ -164,33 +175,46 @@ export default function EditProfileScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: { padding: 20, alignItems: "center" },
   avatarContainer: { alignItems: "center", marginBottom: 30 },
-  avatarImage: { width: 140, height: 140, borderRadius: 70, backgroundColor: "#ddd" },
+  avatarImage: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "#ddd",
+    borderWidth: 2,
+    borderColor: PRIMARY,
+  },
   iconRow: { flexDirection: "row", marginTop: 10, gap: 15 },
-  iconButton: { backgroundColor: PRIMARY, padding: 6, borderRadius: 20 },
+  iconButton: { backgroundColor: PRIMARY, padding: 8, borderRadius: 25 },
   card: {
     backgroundColor: CARD_BG,
-    padding: 20,
-    borderRadius: 16,
+    padding: 25,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: BORDER_COLOR,
     width: "100%",
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
     marginTop: 10,
-    alignItems: "center",
   },
+  inputGroup: { width: "100%", marginBottom: 18 },
+  label: { fontSize: 14, fontWeight: "600", color: "#555", marginBottom: 6 },
   input: {
     borderWidth: 1,
     borderColor: BORDER_COLOR,
     padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    borderRadius: 10,
     backgroundColor: "#fdfdfd",
-    width: "100%",
+    fontSize: 16,
   },
-  button: { padding: 14, borderRadius: 8, alignItems: "center", width: "100%" },
+  button: {
+    padding: 16,
+    borderRadius: 10,
+    alignItems: "center",
+    width: "100%",
+    marginTop: 10,
+  },
   buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
