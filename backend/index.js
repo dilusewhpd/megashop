@@ -24,6 +24,7 @@ app.use("/products", productRoutes);
 app.use("/cart", cartRoutes);
 app.use("/orders", orderRoutes);
 app.use("/payment", paymentRoutes);
+app.use("/user", require("./routes/userRoutes"));
 
 // test route
 app.get("/", (req, res) => {

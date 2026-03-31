@@ -1,24 +1,20 @@
 const jwt = require("jsonwebtoken");
-
-exports.register = (req, res) => {
-  res.json({ message: "Register route works ✅", body: req.body });
-};const bcrypt = require("bcrypt");
+const bcrypt = require("bcrypt");
 const { v4: uuidv4 } = require("uuid");
 const db = require("../config/db");
+const tokenBlacklist = require("../utils/tokenBlacklist");
 
 // User Registration
 exports.register = async (req, res) => {
   try {
     const { email, password, fullName } = req.body;
 
-    // 1. Validation
     if (!email || !password || !fullName) {
       return res.status(400).json({
         message: "All fields are required",
       });
     }
 
-    // 2. Check existing user
     const [existing] = await db.query(
       "SELECT id FROM users WHERE email = ?",
       [email]
@@ -30,10 +26,7 @@ exports.register = async (req, res) => {
       });
     }
 
-    // 3. Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // 4. Create user
     const userId = uuidv4();
 
     await db.query(
@@ -41,7 +34,6 @@ exports.register = async (req, res) => {
       [userId, email, hashedPassword, fullName]
     );
 
-    // 5. Success response
     res.status(201).json({
       message: "User registered successfully ✅",
     });
@@ -53,7 +45,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// User Login
+// Login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -91,6 +83,28 @@ exports.login = async (req, res) => {
     });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Logout
+exports.logout = (req, res) => {
+  try {
+    const header = req.headers.authorization;
+
+    if (!header || !header.startsWith("Bearer ")) {
+      return res.status(400).json({ message: "Missing token" });
+    }
+
+    const token = header.split(" ")[1];
+
+    console.log("LOGOUT TOKEN:", token); // ✅ debug
+
+    tokenBlacklist.add(token);
+
+    return res.json({ message: "Logout successful ✅" });
+  } catch (err) {
+    console.error("LOGOUT ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
