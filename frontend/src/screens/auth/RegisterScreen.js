@@ -1,12 +1,11 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { registerApi } from "../../api/authApi"; // if you have an API
+import { registerApi } from "../../api/authApi";
 
-const PRIMARY = "#2e7d32";      // main green
-const LIGHT_BLUE = "#e8f5e9";    // input background
-const BORDER_BLUE = "#c8e6c9";   // input border
-const BACKGROUND = "#f4fbf4";    // screen background
+const PRIMARY = "#2e7d32";
+const LIGHT_BLUE = "#e8f5e9";
+const BORDER_BLUE = "#c8e6c9";
+const BACKGROUND = "#f4fbf4";
 
 export default function RegisterScreen({ navigation }) {
   const [name, setName] = useState("");
@@ -14,38 +13,69 @@ export default function RegisterScreen({ navigation }) {
   const [password, setPassword] = useState("");
 
   const handleRegister = async () => {
-  if (!name || !email || !password) {
-    Alert.alert("Error", "Please fill all fields");
-    return;
-  }
+    if (!name || !email || !password) {
+      Alert.alert("Error", "Please fill all fields");
+      return;
+    }
 
-  try {
-
-    const res = await registerApi(name, email, password);
-
-    Alert.alert("Success", "Registered successfully!");
-
-    navigation.navigate("Login");
-
-  } catch (err) {
-  console.log("REGISTER ERROR:", err.response?.data);
-
-  const errorMsg =
-    err?.response?.data?.message || "Registration failed";
-
-  Alert.alert("Error", errorMsg);
-}
-};
+    try {
+      const res = await registerApi(name, email, password);
+      Alert.alert("Success", "Registered successfully!");
+      navigation.navigate("Login");
+    } catch (err) {
+      console.log("REGISTER ERROR:", err.response?.data);
+      const errorMsg = err?.response?.data?.message || "Registration failed";
+      Alert.alert("Error", errorMsg);
+    }
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Register</Text>
-      <TextInput style={styles.input} placeholder="Name" value={name} onChangeText={setName} />
-      <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
+
+      {/* NAME FIELD */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your name"
+          placeholderTextColor="#aaa"
+          value={name}
+          onChangeText={setName}
+        />
+      </View>
+
+      {/* EMAIL FIELD */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your email"
+          placeholderTextColor="#aaa"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+      </View>
+
+      {/* PASSWORD FIELD */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Password</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your password"
+          placeholderTextColor="#aaa"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+      </View>
+
       <Pressable style={styles.button} onPress={handleRegister}>
         <Text style={styles.buttonText}>Register</Text>
       </Pressable>
+
       <Pressable onPress={() => navigation.navigate("Login")}>
         <Text style={styles.link}>Already have an account? Login</Text>
       </Pressable>
@@ -54,42 +84,54 @@ export default function RegisterScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 20, 
+  container: {
+    flex: 1,
+    padding: 25,
     justifyContent: "center",
-    backgroundColor: BACKGROUND, // match HomeScreen
+    backgroundColor: BACKGROUND,
   },
-  title: { 
-    fontSize: 24, 
-    fontWeight: "bold", 
-    marginBottom: 20, 
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    marginBottom: 30,
     textAlign: "center",
-    color: "#222", // dark professional title
+    color: "#222",
   },
-  input: { 
-    borderWidth: 1, 
-    borderColor: BORDER_BLUE, // match HomeScreen
-    padding: 12, 
-    borderRadius: 8, 
-    marginBottom: 12,
-    backgroundColor: LIGHT_BLUE, // match HomeScreen
-    color: "#222", // text color inside input
+  inputGroup: {
+    marginBottom: 18,
   },
-  button: { 
-    backgroundColor: PRIMARY, // green button
-    padding: 14, 
-    borderRadius: 8, 
-    alignItems: "center",
-  },
-  buttonText: { 
-    color: "#fff", // white text on button
-    fontWeight: "bold", 
-  },
-  link: { 
-    marginTop: 15, 
-    textAlign: "center", 
-    color: PRIMARY, // green link similar to HomeScreen theme
+  label: {
+    fontSize: 14,
     fontWeight: "600",
+    color: "#555",
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: BORDER_BLUE,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: LIGHT_BLUE,
+    fontSize: 16,
+    color: "#222",
+  },
+  button: {
+    backgroundColor: PRIMARY,
+    padding: 16,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  link: {
+    marginTop: 20,
+    textAlign: "center",
+    color: PRIMARY,
+    fontWeight: "600",
+    fontSize: 15,
   },
 });
