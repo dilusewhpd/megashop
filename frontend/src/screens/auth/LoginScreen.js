@@ -19,19 +19,14 @@ export default function LoginScreen({ navigation, setToken }) {
       const token = res.data.token;
       const user = res.data.user;
 
-      // ✅ Save token
       await AsyncStorage.setItem("token", token);
-
-      // ✅ Save user
       await AsyncStorage.setItem("user", JSON.stringify(user));
 
       setToken(token);
-
       setMessage("Login successful ✅");
 
     } catch (err) {
-      const errorMsg =
-        err?.response?.data?.message || "Login failed ❌";
+      const errorMsg = err?.response?.data?.message || "Login failed ❌";
       setMessage(errorMsg);
     } finally {
       setLoading(false);
@@ -42,21 +37,32 @@ export default function LoginScreen({ navigation, setToken }) {
     <View style={styles.container}>
       <Text style={styles.title}>MegaShop Login</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-      />
+      {/* EMAIL FIELD */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your email"
+          placeholderTextColor="#aaa"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+      </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      {/* PASSWORD FIELD */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Password</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your password"
+          placeholderTextColor="#aaa"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+      </View>
 
       <Pressable style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>
@@ -64,7 +70,7 @@ export default function LoginScreen({ navigation, setToken }) {
         </Text>
       </Pressable>
 
-      <Text style={styles.message}>{message}</Text>
+      {message ? <Text style={styles.message}>{message}</Text> : null}
 
       <Pressable onPress={() => navigation.navigate("Register")}>
         <Text style={styles.link}>
@@ -78,45 +84,58 @@ export default function LoginScreen({ navigation, setToken }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 25,
     justifyContent: "center",
-    backgroundColor: "#f4fbf4", // HomeScreen BACKGROUND
+    backgroundColor: "#f4fbf4",
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
-    marginBottom: 20,
+    marginBottom: 30,
     textAlign: "center",
-    color: "#222", // HomeScreen dark title color
+    color: "#222",
+  },
+  inputGroup: {
+    marginBottom: 18,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#555",
+    marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#c8e6c9", // HomeScreen BORDER_BLUE
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    backgroundColor: "#e8f5e9", // HomeScreen LIGHT_BLUE
-    color: "#222", // text color for input
+    borderColor: "#c8e6c9",
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: "#e8f5e9",
+    fontSize: 16,
+    color: "#222",
   },
   button: {
-    backgroundColor: "#2e7d32", // HomeScreen PRIMARY
-    padding: 14,
-    borderRadius: 8,
+    backgroundColor: "#2e7d32",
+    padding: 16,
+    borderRadius: 10,
     alignItems: "center",
+    marginTop: 10,
   },
   buttonText: {
-    color: "#fff", // white text
+    color: "#fff",
     fontWeight: "bold",
+    fontSize: 16,
   },
   message: {
     marginTop: 15,
     textAlign: "center",
-    color: "#555", // similar to HomeScreen text
+    color: "#555",
+    fontSize: 14,
   },
   link: {
-    marginTop: 15,
+    marginTop: 20,
     textAlign: "center",
-    color: "#2e7d32", // HomeScreen PRIMARY green
+    color: "#2e7d32",
     fontWeight: "600",
+    fontSize: 15,
   },
 });
