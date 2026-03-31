@@ -63,3 +63,7 @@ export const promoImages = {
   "10-discount": require("../assets/images/10-discount.jpg"),
   "5-discount": require("../assets/images/5-discount.jpg"),
 };
+
+export const profileImages = {
+  default: require("../assets/images/default.jpg"),
+};
