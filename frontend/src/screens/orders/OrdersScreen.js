@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
-const API_BASE = "http://192.168.8.167:5000";
+const API_BASE = "http://localhost:5000";
 
 // Theme
 const PRIMARY = "#2e7d32";
@@ -67,39 +67,32 @@ export default function OrdersScreen({ navigation }) {
     }
   };
 
-  const deleteOrder = async (orderNumber) => {
-    Alert.alert("Confirm Delete", "Are you sure you want to delete this order?", [
-      { text: "Cancel", style: "cancel" },
+ const deleteOrder = async (orderNumber) => {
+  console.log("Deleting order:", orderNumber);
+
+  try {
+    const token =
+      Platform.OS === "web"
+        ? localStorage.getItem("token")
+        : await AsyncStorage.getItem("token");
+
+    const res = await axios.delete(
+      `${API_BASE}/orders/by-number/${orderNumber}`,
       {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const token =
-              Platform.OS === "web"
-                ? localStorage.getItem("token")
-                : await AsyncStorage.getItem("token");
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
-            await axios.delete(
-              `${API_BASE}/orders/by-number/${orderNumber}`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              }
-            );
+    console.log("DELETE SUCCESS:", res.data);
 
-            setOrders((prev) =>
-              prev.filter((o) => o.order_number !== orderNumber)
-            );
+    setOrders((prev) =>
+      prev.filter((o) => o.order_number !== orderNumber)
+    );
 
-            Alert.alert("Deleted", "Order deleted successfully ✅");
-          } catch (err) {
-            console.log("DELETE ERROR:", err.response || err.message);
-            Alert.alert("Error", "Failed to delete order");
-          }
-        },
-      },
-    ]);
-  };
+  } catch (err) {
+    console.log("DELETE ERROR:", err.response?.data || err.message);
+  }
+};
 
   useEffect(() => {
     loadOrders();
