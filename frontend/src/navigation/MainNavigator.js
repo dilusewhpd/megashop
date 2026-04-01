@@ -6,12 +6,13 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "../screens/home/HomeScreen";
 import ProductDetailsScreen from "../screens/home/ProductDetailsScreen";
 import CartScreen from "../screens/cart/CartScreen";
-import CheckoutScreen from "../screens/orders/CheckoutScreen"; // ✅ Import
+import CheckoutScreen from "../screens/orders/CheckoutScreen";
 import OrdersScreen from "../screens/orders/OrdersScreen";
 import ProfileScreen from "../screens/profile/ProfileScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
 import ChangePasswordScreen from "../screens/profile/ChangePasswordScreen";
-import OrderDetailsScreen from "../screens/orders/OrderDetailsScreen"; // ✅ Import
+import OrderDetailsScreen from "../screens/orders/OrderDetailsScreen";
+import WishlistScreen from "../screens/wishlist/WishlistScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -136,6 +137,15 @@ export default function MainNavigator({ token, setToken }) {
     >
       <Tab.Screen name="Home">{() => <HomeStack token={token} />}</Tab.Screen>
       <Tab.Screen name="Cart">{() => <CartStack token={token} />}</Tab.Screen>
+      <Tab.Screen
+        name="Wishlist"
+        component={WishlistScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="heart-outline" size={size} color={color} />
+          ),
+        }}
+      />
       <Tab.Screen name="Orders" component={OrdersStack} />
       <Tab.Screen name="Profile">
         {(props) => <ProfileStack {...props} setToken={setToken} />}
