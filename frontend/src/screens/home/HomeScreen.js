@@ -15,6 +15,7 @@ import { getProductsApi } from "../../api/productApi";
 import { productImages, promoImages } from "../../utils/imageMapping";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getPromoBannersApi } from "../../api/cartApi";
+import { addWishlistApi, removeWishlistApi, getWishlistApi } from "../../api/wishlistApi";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const PRIMARY = "#2e7d32";
@@ -24,11 +25,13 @@ const BACKGROUND = "#f4fbf4";
 
 export default function HomeScreen({ navigation }) {
   const [products, setProducts] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
   const [status, setStatus] = useState("Loading...");
   const [query, setQuery] = useState("");
   const [priceFilter, setPriceFilter] = useState("ALL");
   const [availablePromos, setAvailablePromos] = useState([]);
 
+  // Load products and promos
   const load = async () => {
     try {
       setStatus("Loading...");
@@ -55,9 +58,23 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  // Load wishlist from AsyncStorage
+ useEffect(() => {
+  const initialize = async () => {
+    await load(); // load products and promos
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const res = await getWishlistApi(token);
+      const productIds = res.data.wishlist.map((p) => p.product_id);
+      setWishlist(productIds); // set wishlisted product IDs
+    } catch (err) {
+      console.log("Failed to load wishlist:", err);
+    }
+  };
+
+  initialize();
+}, []);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -76,6 +93,25 @@ export default function HomeScreen({ navigation }) {
     });
   }, [navigation]);
 
+  // ✅ Wishlist toggle
+const toggleWishlist = async (productId) => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+
+    if (wishlist.includes(productId)) {
+      // Remove from backend
+      await removeWishlistApi(productId, token);
+      setWishlist((prev) => prev.filter((id) => id !== productId));
+    } else {
+      // Add to backend
+      await addWishlistApi(productId, token);
+      setWishlist((prev) => [...prev, productId]);
+    }
+  } catch (err) {
+    console.log("Wishlist toggle error:", err);
+  }
+};
+
   const filteredProducts = products
     .filter((p) =>
       (p?.name || "").toLowerCase().includes(query.trim().toLowerCase())
@@ -91,28 +127,21 @@ export default function HomeScreen({ navigation }) {
 
   const renderItem = ({ item }) => {
     const imageName = item?.images?.[0] || "placeholder.jpeg";
-
-    const originalPrice = Number(item.original_price || item.price);
+    const originalPrice = Number(item.original_price || item.price || 0);
     const discount = Number(item.discount || 0);
-    const finalPrice =
-      originalPrice - (originalPrice * discount) / 100;
+    const finalPrice = originalPrice - (originalPrice * discount) / 100;
+    const isWishlisted = wishlist.includes(item.id);
 
     return (
       <Pressable
-        style={({ pressed }) => [
-          styles.card,
-          { opacity: pressed ? 0.85 : 1 },
-        ]}
+        style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
         onPress={() =>
           navigation.navigate("ProductDetails", { id: item.id })
         }
       >
         <View style={styles.cardRow}>
           <Image
-            source={
-              productImages[imageName] ||
-              productImages["placeholder.jpeg"]
-            }
+            source={productImages[imageName] || productImages["placeholder.jpeg"]}
             style={styles.productImageLeft}
           />
 
@@ -123,19 +152,12 @@ export default function HomeScreen({ navigation }) {
 
             {discount > 0 ? (
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Text style={styles.priceFinal}>
-                  Rs. {finalPrice.toFixed(2)}
-                </Text>
-                <Text style={styles.priceOriginal}>
-                  {" "}
-                  Rs. {originalPrice.toFixed(2)}
-                </Text>
-                <Text style={styles.discountText}> -{discount}%</Text>
+                <Text style={styles.priceFinal}>Rs. {finalPrice.toFixed(2)}</Text>
+                <Text style={styles.priceOriginal}> Rs. {originalPrice.toFixed(2)}</Text>
+                <Text style={styles.discountText}>-{discount}%</Text>
               </View>
             ) : (
-              <Text style={styles.priceFinal}>
-                Rs. {originalPrice.toFixed(2)}
-              </Text>
+              <Text style={styles.priceFinal}>Rs. {originalPrice.toFixed(2)}</Text>
             )}
 
             <View style={styles.metaRow}>
@@ -152,6 +174,18 @@ export default function HomeScreen({ navigation }) {
               </View>
             </View>
           </View>
+
+          {/* Heart Icon Top-Right */}
+          <Pressable
+            onPress={() => toggleWishlist(item.id)}
+            style={styles.wishlistIcon}
+          >
+            <Ionicons
+              name={isWishlisted ? "heart" : "heart-outline"}
+              size={24}
+              color={isWishlisted ? "red" : "#777"}
+            />
+          </Pressable>
         </View>
       </Pressable>
     );
@@ -159,7 +193,6 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-
       {/* SEARCH + FILTER */}
       <View style={{ backgroundColor: BACKGROUND, zIndex: 1 }}>
         <View style={styles.searchBox}>
@@ -195,7 +228,6 @@ export default function HomeScreen({ navigation }) {
 
         ListHeaderComponent={
           <>
-            {/* 🔥 IMPROVED PROMO SECTION */}
             {availablePromos.length > 0 && (
               <View style={{ marginBottom: 20 }}>
                 <Text style={styles.sectionTitle}>🔥 Hot Deals</Text>
@@ -207,7 +239,6 @@ export default function HomeScreen({ navigation }) {
                 >
                   {availablePromos.map((item) => (
                     <View key={item.id} style={styles.newPromoCard}>
-                      
                       <View style={styles.newPromoLeft}>
                         <Text style={styles.newPromoTitle}>{item.title}</Text>
 
@@ -345,18 +376,16 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // 🔥 NEW PROMO STYLES
   newPromoCard: {
     flexDirection: "row",
     width: SCREEN_WIDTH * 0.85,
     marginRight: 14,
     borderRadius: 18,
-    backgroundColor: "#ffffff",
+    backgroundColor: LIGHT_BLUE,
     elevation: 5,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: BORDER_BLUE,
-    backgroundColor: LIGHT_BLUE,
   },
 
   newPromoLeft: {
@@ -405,4 +434,11 @@ const styles = StyleSheet.create({
   },
 
   status: { textAlign: "center", marginTop: 20 },
+
+  wishlistIcon: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 10,
+  },
 });

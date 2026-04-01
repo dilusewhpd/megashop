@@ -7,6 +7,7 @@ const productRoutes = require("./routes/productRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const wishlistRoutes = require("./routes/wishlistRoutes");
 
 
 console.log("DB_USER:", process.env.DB_USER);
@@ -25,6 +26,7 @@ app.use("/cart", cartRoutes);
 app.use("/orders", orderRoutes);
 app.use("/payment", paymentRoutes);
 app.use("/user", require("./routes/userRoutes"));
+app.use("/wishlist", wishlistRoutes);
 
 // test route
 app.get("/", (req, res) => {
