@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { getProductByIdApi, getRelatedProductsApi } from "../../api/productApi";
 import { addToCartApi } from "../../api/cartApi";
 import { productImages } from "../../utils/imageMapping";
+import { addWishlistApi } from "../../api/wishlistApi";
 
 const PRIMARY = "#2e7d32";
 const LIGHT_GREEN = "#e8f5e9";
@@ -97,6 +98,28 @@ export default function ProductDetailsScreen({ route, navigation }) {
     } catch (error) {
       console.log("ADD CART ERROR:", error?.response?.data || error.message);
       Alert.alert("Error", "Failed to add product");
+    }
+  };
+
+  const handleAddToWishlist = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        Alert.alert("Login required", "Please login first");
+        return;
+      }
+
+      // ✅ Call addWishlistApi with product id and token
+      await addWishlistApi(id, token);
+
+      Alert.alert("Success", "Product added to wishlist 💚");
+    } catch (error) {
+      console.log(
+        "Add Wishlist Error:",
+        error?.response?.data || error.message,
+      );
+      Alert.alert("Error", "Failed to add to wishlist");
     }
   };
 
@@ -227,6 +250,18 @@ export default function ProductDetailsScreen({ route, navigation }) {
       <Pressable style={styles.cartButton} onPress={handleAddToCart}>
         <Ionicons name="cart" size={18} color="#fff" />
         <Text style={styles.cartButtonText}>Add to Cart</Text>
+      </Pressable>
+
+      {/* ADD TO WISHLIST */}
+      <Pressable
+        style={[
+          styles.cartButton,
+          { backgroundColor: "#2f4f1e", marginTop: 10 },
+        ]}
+        onPress={handleAddToWishlist}
+      >
+        <Ionicons name="heart" size={18} color="#fff" />
+        <Text style={styles.cartButtonText}>Add to Wishlist</Text>
       </Pressable>
 
       {/* RELATED PRODUCTS */}
