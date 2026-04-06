@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/constants";
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = API_BASE_URL;
 
 export const getWishlistApi = (token) =>
   axios.get(`${API_BASE}/wishlist`, {
@@ -18,4 +19,3 @@ export const removeWishlistApi = (productId, token) =>
   axios.delete(`${API_BASE}/wishlist/${productId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-

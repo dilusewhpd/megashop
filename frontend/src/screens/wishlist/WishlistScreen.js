@@ -54,10 +54,6 @@ export default function WishlistScreen({ navigation, route }) {
       setWishlist((prev) =>
         prev.filter((item) => item.product_id !== productId)
       );
-
-      if (route.params?.updateHomeWishlist) {
-        route.params.updateHomeWishlist(productId, false);
-      }
     } catch (err) {
       console.log("Remove from wishlist error:", err);
     }

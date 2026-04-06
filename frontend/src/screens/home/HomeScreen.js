@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useLayoutEffect } from "react";
+import React, { useEffect, useState, useLayoutEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { productImages, promoImages } from "../../utils/imageMapping";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getPromoBannersApi } from "../../api/cartApi";
 import { addWishlistApi, removeWishlistApi, getWishlistApi } from "../../api/wishlistApi";
+import { useFocusEffect } from "@react-navigation/native";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const PRIMARY = "#2e7d32";
@@ -51,12 +52,36 @@ export default function HomeScreen({ navigation }) {
       const promos = await getPromoBannersApi(token);
 
       setAvailablePromos(promos || []);
+      
+      // Refresh wishlist
+      const wishRes = await getWishlistApi(token);
+      const wishlistIds = wishRes.data.wishlist.map((p) => p.product_id);
+      setWishlist(wishlistIds);
+      
       setStatus("");
     } catch (e) {
       console.log("LOAD ERROR:", e);
       setStatus("Failed to load products");
     }
   };
+
+  // Refresh wishlist when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshWishlist = async () => {
+        try {
+          const token = await AsyncStorage.getItem("token");
+          const res = await getWishlistApi(token);
+          const productIds = res.data.wishlist.map((p) => p.product_id);
+          setWishlist(productIds);
+        } catch (err) {
+          console.log("Failed to refresh wishlist:", err);
+        }
+      };
+
+      refreshWishlist();
+    }, [])
+  );
 
   // Load wishlist from AsyncStorage
  useEffect(() => {
@@ -235,7 +260,10 @@ const toggleWishlist = async (productId) => {
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingHorizontal: 16 }}
+                  scrollEnabled={true}
+                  style={{ height: 180 }}
+                  contentContainerStyle={{ paddingHorizontal: 16, flexGrow: 1 }}
+                  nestedScrollEnabled={true}
                 >
                   {availablePromos.map((item) => (
                     <View key={item.id} style={styles.newPromoCard}>
