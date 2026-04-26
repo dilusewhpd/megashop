@@ -15,6 +15,7 @@ exports.register = async (req, res) => {
       });
     }
 
+    // Check if user already exists
     const [existing] = await db.query(
       "SELECT id FROM users WHERE email = ?",
       [email]
@@ -26,6 +27,7 @@ exports.register = async (req, res) => {
       });
     }
 
+    // Hash password and save user
     const hashedPassword = await bcrypt.hash(password, 10);
     const userId = uuidv4();
 
@@ -48,12 +50,14 @@ exports.register = async (req, res) => {
 // Login
 exports.login = async (req, res) => {
   try {
+    //check if email and password are provided
     const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
+    // Find user by email
     const [rows] = await db.query(
       "SELECT id, email, password_hash, full_name FROM users WHERE email = ?",
       [email]
@@ -63,6 +67,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    // Compare password
     const user = rows[0];
 
     const ok = await bcrypt.compare(password, user.password_hash);
@@ -70,6 +75,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    // Generate JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
@@ -98,7 +104,7 @@ exports.logout = (req, res) => {
 
     const token = header.split(" ")[1];
 
-    console.log("LOGOUT TOKEN:", token); // ✅ debug
+    console.log("LOGOUT TOKEN:", token); 
 
     tokenBlacklist.add(token);
 

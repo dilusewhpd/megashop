@@ -1,9 +1,7 @@
 const db = require("../config/db");
 const { v4: uuidv4 } = require("uuid");
 
-// ==============================
-// PLACE ORDER (CHECKOUT)
-// ==============================
+//payment method: COD, PayHere, etc.
 exports.checkout = async (req, res) => {
   try {
     const userId = req.user.userId;

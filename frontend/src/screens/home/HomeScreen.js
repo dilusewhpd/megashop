@@ -9,9 +9,11 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  Modal,
+  TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getProductsApi } from "../../api/productApi";
+import { getProductsApi, getCategoriesApi } from "../../api/productApi";
 import { productImages, promoImages } from "../../utils/imageMapping";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getPromoBannersApi } from "../../api/cartApi";
@@ -29,17 +31,27 @@ export default function HomeScreen({ navigation }) {
   const [wishlist, setWishlist] = useState([]);
   const [status, setStatus] = useState("Loading...");
   const [query, setQuery] = useState("");
-  const [priceFilter, setPriceFilter] = useState("ALL");
   const [availablePromos, setAvailablePromos] = useState([]);
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    sortBy: "newest",
+    category: "all",
+    minRating: "all",
+    priceRange: "all"
+  });
+  const [categories, setCategories] = useState([]);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   // Load products and promos
   const load = async () => {
     try {
       setStatus("Loading...");
 
-      const res = await getProductsApi();
+      const res = await getProductsApi(filters);
       const products = res.data.products || [];
 
+      //product formating
       const parsedProducts = products.map((p) => ({
         ...p,
         images:
@@ -65,28 +77,26 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  // Refresh wishlist when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      const refreshWishlist = async () => {
-        try {
-          const token = await AsyncStorage.getItem("token");
-          const res = await getWishlistApi(token);
-          const productIds = res.data.wishlist.map((p) => p.product_id);
-          setWishlist(productIds);
-        } catch (err) {
-          console.log("Failed to refresh wishlist:", err);
-        }
-      };
+  // Load categories
+  const loadCategories = async () => {
+    try {
+      const res = await getCategoriesApi();
+      setCategories(res.data.categories || []);
+    } catch (e) {
+      console.log("LOAD CATEGORIES ERROR:", e);
+    }
+  };
 
-      refreshWishlist();
-    }, [])
-  );
+  // Reload products when filters change
+  useEffect(() => {
+    load();
+  }, [filters]);
 
   // Load wishlist from AsyncStorage
  useEffect(() => {
   const initialize = async () => {
     await load(); // load products and promos
+    await loadCategories(); // load categories
 
     try {
       const token = await AsyncStorage.getItem("token");
@@ -137,18 +147,9 @@ const toggleWishlist = async (productId) => {
   }
 };
 
-  const filteredProducts = products
-    .filter((p) =>
-      (p?.name || "").toLowerCase().includes(query.trim().toLowerCase())
-    )
-    .filter((p) => {
-      const price = Number(p?.price || 0);
-      if (priceFilter === "LT2000") return price < 2000;
-      if (priceFilter === "BTW2000_5000")
-        return price >= 2000 && price <= 5000;
-      if (priceFilter === "GT5000") return price > 5000;
-      return true;
-    });
+  const filteredProducts = products.filter((p) =>
+    (p?.name || "").toLowerCase().includes(query.trim().toLowerCase())
+  );
 
   const renderItem = ({ item }) => {
     const imageName = item?.images?.[0] || "placeholder.jpeg";
@@ -218,7 +219,7 @@ const toggleWishlist = async (productId) => {
 
   return (
     <View style={styles.container}>
-      {/* SEARCH + FILTER */}
+      {/* SEARCH + FILTER BUTTON */}
       <View style={{ backgroundColor: BACKGROUND, zIndex: 1 }}>
         <View style={styles.searchBox}>
           <Ionicons name="search" size={18} color="#777" />
@@ -230,17 +231,15 @@ const toggleWishlist = async (productId) => {
           />
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterSection}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
+        {/* Filter Button */}
+        <Pressable
+          style={styles.filterButton}
+          onPress={() => setShowFilterModal(true)}
         >
-          <Chip label="All" active={priceFilter === "ALL"} onPress={() => setPriceFilter("ALL")} />
-          <Chip label="Under 2000" active={priceFilter === "LT2000"} onPress={() => setPriceFilter("LT2000")} />
-          <Chip label="2000 - 5000" active={priceFilter === "BTW2000_5000"} onPress={() => setPriceFilter("BTW2000_5000")} />
-          <Chip label="Above 5000" active={priceFilter === "GT5000"} onPress={() => setPriceFilter("GT5000")} />
-        </ScrollView>
+          <Ionicons name="filter" size={18} color="#777" />
+          <Text style={styles.filterButtonText}>Filter by...</Text>
+          <Ionicons name="chevron-down" size={16} color="#777" />
+        </Pressable>
       </View>
 
       {/* LIST */}
@@ -299,6 +298,9 @@ const toggleWishlist = async (productId) => {
                 </ScrollView>
               </View>
             )}
+
+            {/* All Products Header */}
+            <Text style={styles.allProductsHeader}>All Products</Text>
           </>
         }
 
@@ -308,20 +310,192 @@ const toggleWishlist = async (productId) => {
           </Text>
         }
       />
-    </View>
-  );
-}
 
-function Chip({ label, active, onPress }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.chip, active && styles.chipActive]}
-    >
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>
-        {label}
-      </Text>
-    </Pressable>
+      {/* FILTER MODAL */}
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter Products</Text>
+              <TouchableOpacity
+                onPress={() => setShowFilterModal(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {/* Sort By Section */}
+              <View style={styles.filterSection}>
+                <Text style={styles.sectionTitle}>Sort By</Text>
+                <View style={styles.optionsContainer}>
+                  {[
+                    { label: "Newest", value: "newest" },
+                    { label: "Price: Low to High", value: "price_low_to_high" },
+                    { label: "Price: High to Low", value: "price_high_to_low" },
+                    { label: "Most Popular", value: "most_popular" },
+                    { label: "Most Sold", value: "most_sold" },
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.optionButton,
+                        filters.sortBy === option.value && styles.optionButtonActive,
+                      ]}
+                      onPress={() => setFilters(prev => ({ ...prev, sortBy: option.value }))}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          filters.sortBy === option.value && styles.optionTextActive,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Category Section */}
+              <View style={styles.filterSection}>
+                <Text style={styles.sectionTitle}>Category</Text>
+                <View style={styles.optionsContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      filters.category === "all" && styles.optionButtonActive,
+                    ]}
+                    onPress={() => setFilters(prev => ({ ...prev, category: "all" }))}
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        filters.category === "all" && styles.optionTextActive,
+                      ]}
+                    >
+                      All Categories
+                    </Text>
+                  </TouchableOpacity>
+                  {categories.map((category) => (
+                    <TouchableOpacity
+                      key={category}
+                      style={[
+                        styles.optionButton,
+                        filters.category === category && styles.optionButtonActive,
+                      ]}
+                      onPress={() => setFilters(prev => ({ ...prev, category }))}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          filters.category === category && styles.optionTextActive,
+                        ]}
+                      >
+                        {category}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Rating Section */}
+              <View style={styles.filterSection}>
+                <Text style={styles.sectionTitle}>Minimum Rating</Text>
+                <View style={styles.optionsContainer}>
+                  {[
+                    { label: "All Ratings", value: "all" },
+                    { label: "4+ Stars", value: "4" },
+                    { label: "3+ Stars", value: "3" },
+                    { label: "2+ Stars", value: "2" },
+                    { label: "1+ Stars", value: "1" },
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.optionButton,
+                        filters.minRating === option.value && styles.optionButtonActive,
+                      ]}
+                      onPress={() => setFilters(prev => ({ ...prev, minRating: option.value }))}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          filters.minRating === option.value && styles.optionTextActive,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Price Range Section */}
+              <View style={styles.filterSection}>
+                <Text style={styles.sectionTitle}>Price Range</Text>
+                <View style={styles.optionsContainer}>
+                  {[
+                    { label: "All Prices", value: "all" },
+                    { label: "Under Rs. 1000", value: "under_1000" },
+                    { label: "Rs. 1000 - 2000", value: "1000_2000" },
+                    { label: "Rs. 2000 - 5000", value: "2000_5000" },
+                    { label: "Rs. 5000 - 10000", value: "5000_10000" },
+                    { label: "Above Rs. 10000", value: "above_10000" },
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.optionButton,
+                        filters.priceRange === option.value && styles.optionButtonActive,
+                      ]}
+                      onPress={() => setFilters(prev => ({ ...prev, priceRange: option.value }))}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          filters.priceRange === option.value && styles.optionTextActive,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => {
+                  setFilters({
+                    sortBy: "newest",
+                    category: "all",
+                    minRating: "all",
+                    priceRange: "all"
+                  });
+                }}
+              >
+                <Text style={styles.clearButtonText}>Clear All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={() => setShowFilterModal(false)}
+              >
+                <Text style={styles.applyButtonText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -341,18 +515,141 @@ const styles = StyleSheet.create({
 
   searchInput: { flex: 1, marginLeft: 8 },
 
-  filterSection: { marginBottom: 10 },
-
-  chip: {
-    padding: 10,
-    borderRadius: 20,
+  filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#fff",
+    borderRadius: 25,
     borderWidth: 1,
-    marginRight: 10,
+    borderColor: BORDER_BLUE,
+    elevation: 2,
   },
 
-  chipActive: { backgroundColor: PRIMARY },
+  filterButtonText: {
+    fontSize: 14,
+    color: "#333",
+    marginHorizontal: 8,
+    fontWeight: "600",
+  },
 
-  chipTextActive: { color: "#fff" },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "80%",
+    minHeight: "50%",
+  },
+
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#333",
+  },
+
+  closeButton: {
+    padding: 5,
+  },
+
+  modalBody: {
+    padding: 20,
+  },
+
+  filterSection: {
+    marginBottom: 24,
+  },
+
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 12,
+  },
+
+  optionsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  optionButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#f9f9f9",
+  },
+
+  optionButtonActive: {
+    backgroundColor: PRIMARY,
+    borderColor: PRIMARY,
+  },
+
+  optionText: {
+    fontSize: 14,
+    color: "#666",
+  },
+
+  optionTextActive: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+
+  modalFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+  },
+
+  clearButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+
+  clearButtonText: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "600",
+  },
+
+  applyButton: {
+    backgroundColor: PRIMARY,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+
+  applyButtonText: {
+    fontSize: 14,
+    color: "#fff",
+    fontWeight: "600",
+  },
 
   card: {
     backgroundColor: "#fff",
@@ -402,6 +699,15 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginLeft: 16,
     marginBottom: 10,
+  },
+
+  allProductsHeader: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#333",
+    marginLeft: 16,
+    marginTop: 10,
+    marginBottom: 16,
   },
 
   newPromoCard: {

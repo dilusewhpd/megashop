@@ -3,14 +3,90 @@ const db = require("../config/db");
 // Get Products
 exports.getProducts = async (req, res) => {
   try {
+    const { sortBy, category, minRating, priceRange } = req.query;
+
+    // Build the WHERE clause for filters
+    let whereClause = "";
+    let params = [];
+
+    if (category && category !== "all") {
+      whereClause += " WHERE category = ?";
+      params.push(category);
+    }
+
+    if (minRating && minRating !== "all") {
+      const ratingValue = parseFloat(minRating);
+      if (whereClause) {
+        whereClause += " AND rating >= ?";
+      } else {
+        whereClause += " WHERE rating >= ?";
+      }
+      params.push(ratingValue);
+    }
+
+    if (priceRange && priceRange !== "all") {
+      let priceCondition = "";
+      if (priceRange === "under_1000") {
+        priceCondition = "price < 1000";
+      } else if (priceRange === "1000_2000") {
+        priceCondition = "price >= 1000 AND price <= 2000";
+      } else if (priceRange === "2000_5000") {
+        priceCondition = "price >= 2000 AND price <= 5000";
+      } else if (priceRange === "5000_10000") {
+        priceCondition = "price >= 5000 AND price <= 10000";
+      } else if (priceRange === "above_10000") {
+        priceCondition = "price > 10000";
+      }
+
+      if (priceCondition) {
+        if (whereClause) {
+          whereClause += ` AND ${priceCondition}`;
+        } else {
+          whereClause += ` WHERE ${priceCondition}`;
+        }
+      }
+    }
+
+    // Build the ORDER BY clause based on sortBy parameter
+    let orderBy = "id DESC"; // default
+
+    if (sortBy === "price_low_to_high") {
+      orderBy = "price ASC";
+    } else if (sortBy === "price_high_to_low") {
+      orderBy = "price DESC";
+    } else if (sortBy === "newest") {
+      orderBy = "id DESC";
+    } else if (sortBy === "most_popular") {
+      orderBy = "rating DESC, review_count DESC";
+    } else if (sortBy === "most_sold") {
+      orderBy = "sold_count DESC";
+    }
+
     const [rows] = await db.query(
       `SELECT id, name, price, original_price, discount, rating, review_count, sold_count, seller, category, images, badges
-      FROM products`
+      FROM products${whereClause}
+      ORDER BY ${orderBy}`,
+      params
     );
 
     res.json({ products: rows });
   } catch (err) {
     console.error("GET PRODUCTS ERROR:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// Get Categories
+exports.getCategories = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category"
+    );
+
+    const categories = rows.map(row => row.category);
+    res.json({ categories });
+  } catch (err) {
+    console.error("GET CATEGORIES ERROR:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
