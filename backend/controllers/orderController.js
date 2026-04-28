@@ -1,7 +1,7 @@
 const db = require("../config/db");
 const { v4: uuidv4 } = require("uuid");
 
-//payment method: COD, PayHere, etc.
+// ===================== CHECKOUT =====================
 exports.checkout = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -14,38 +14,38 @@ exports.checkout = async (req, res) => {
     } = req.body;
 
     // 1) Get cart items
-    const [cart] = await db.query(
+    const cartResult = await db.query(
       `
       SELECT c.quantity, p.price, p.id AS product_id
       FROM cart_items c
       JOIN products p ON c.product_id = p.id
-      WHERE c.user_id = ?
+      WHERE c.user_id = $1
       `,
-      [userId],
+      [userId]
     );
 
-    if (cart.length === 0) {
+    if (cartResult.rows.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
     // 2) Calculate subtotal
     let subtotal = 0;
-    cart.forEach((item) => {
+    cartResult.rows.forEach((item) => {
       subtotal += item.price * item.quantity;
     });
 
-    const tax = 0;
-    const shipping = 0;
-
-    // 3) Calculate discount_amount if promo applied
+    // 3) Promo discount
     let discount_amount = 0;
+
     if (promoCode) {
-      const [promoRows] = await db.query(
-        "SELECT * FROM promo_codes WHERE code = ? AND is_active = 1",
-        [promoCode],
+      const promoResult = await db.query(
+        "SELECT * FROM promo_codes WHERE code = $1 AND is_active = true",
+        [promoCode]
       );
-      if (promoRows.length > 0) {
-        const promo = promoRows[0];
+
+      if (promoResult.rows.length > 0) {
+        const promo = promoResult.rows[0];
+
         if (promo.discount_type === "percentage") {
           discount_amount = (subtotal * promo.discount_value) / 100;
         } else {
@@ -54,8 +54,9 @@ exports.checkout = async (req, res) => {
       }
     }
 
-    // 4) Calculate total
-    const total = req.body.totalAmount || subtotal + tax + shipping - discount_amount;
+    // 4) Total
+    const total =
+      req.body.totalAmount || subtotal - discount_amount;
 
     // 5) Create order
     const orderId = uuidv4();
@@ -64,89 +65,75 @@ exports.checkout = async (req, res) => {
     await db.query(
       `
       INSERT INTO orders
-      (id, user_id, order_number, status, subtotal, tax, shipping, discount_amount, total, shipping_address, payment_method)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, user_id, order_number, status, discount_amount, total, shipping_address, payment_method)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `,
       [
         orderId,
         userId,
         orderNumber,
         paymentStatus,
-        subtotal,
-        tax,
-        shipping,
         discount_amount,
         total,
         JSON.stringify(shippingAddress),
         paymentMethod,
-      ],
+      ]
     );
 
     // 6) Insert order items
-    const orderItemsValues = cart.map((item) => [
-      uuidv4(),
-      orderId,
-      item.product_id,
-      item.quantity,
-      item.price,
-      item.price * item.quantity,
-    ]);
-
-    if (orderItemsValues.length > 0) {
+    for (const item of cartResult.rows) {
       await db.query(
         `
         INSERT INTO order_items
         (id, order_id, product_id, quantity, price, total_price)
-        VALUES ?
+        VALUES ($1, $2, $3, $4, $5, $6)
         `,
-        [orderItemsValues],
+        [
+          uuidv4(),
+          orderId,
+          item.product_id,
+          item.quantity,
+          item.price,
+          item.price * item.quantity,
+        ]
       );
     }
 
     // 7) Clear cart
-    await db.query("DELETE FROM cart_items WHERE user_id = ?", [userId]);
+    await db.query("DELETE FROM cart_items WHERE user_id = $1", [userId]);
 
-    // 🔹 Return orderNumber and total so frontend can send correct amount to PayHere
     return res.status(201).json({
       message: "Order placed successfully ✅",
       orderNumber,
-      total, // 🔹 send total to frontend
+      total,
       discount_amount,
       status: paymentStatus,
     });
   } catch (err) {
     console.error("CHECKOUT ERROR:", err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// ==============================
-// CREATE PAYMENT (FIXED)
-// ==============================
+// ===================== CREATE PAYMENT =====================
 exports.createPayment = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { orderNumber, amount } = req.body; // frontend must send orderNumber + total
+    const { orderNumber, amount } = req.body;
 
-    // 1) Fetch order from DB to ensure correct total
-    const [orderRows] = await db.query(
-      "SELECT total, id FROM orders WHERE order_number = ? AND user_id = ?",
-      [orderNumber, userId],
+    const orderResult = await db.query(
+      "SELECT total, id FROM orders WHERE order_number = $1 AND user_id = $2",
+      [orderNumber, userId]
     );
 
-    if (orderRows.length === 0) {
+    if (orderResult.rows.length === 0) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    const order = orderRows[0];
-
-    // 2) Use total from order (amount from frontend is optional)
+    const order = orderResult.rows[0];
     const finalAmount = amount || order.total;
 
-    // 3) Prepare PayHere payment payload
-    const paymentData = {
+    return res.json({
       merchant_id: "YOUR_MERCHANT_ID",
       return_url: "http://localhost:5000/payment/success",
       cancel_url: "http://localhost:5000/payment/cancel",
@@ -162,116 +149,112 @@ exports.createPayment = async (req, res) => {
       address: "",
       city: "",
       country: "Sri Lanka",
-    };
-
-    return res.json(paymentData);
+    });
   } catch (err) {
     console.error("PAYMENT CREATE ERROR:", err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// ==============================
-// OTHER CONTROLLERS (NO CHANGES NEEDED)
-// ==============================
+// ===================== GET MY ORDERS =====================
 exports.getMyOrders = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const [rows] = await db.query(
+
+    const result = await db.query(
       `
-      SELECT id, order_number, status, subtotal, tax, shipping, discount_amount, total, created_at
+      SELECT id, order_number, status, discount_amount, total, created_at
       FROM orders
-      WHERE user_id = ?
+      WHERE user_id = $1
       ORDER BY created_at DESC
       `,
-      [userId],
+      [userId]
     );
-    return res.json({ orders: rows });
+
+    return res.json({ orders: result.rows });
   } catch (err) {
     console.error("GET ORDERS ERROR:", err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
+// ===================== GET ORDER BY NUMBER =====================
 exports.getOrderByNumber = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { orderNumber } = req.params;
-    const [rows] = await db.query(
+
+    const orderResult = await db.query(
       `
-      SELECT id, order_number, status, subtotal, tax, shipping, discount_amount, total,
+      SELECT id, order_number, status, discount_amount, total,
              shipping_address, payment_method, created_at
       FROM orders
-      WHERE user_id = ? AND order_number = ?
+      WHERE user_id = $1 AND order_number = $2
       `,
-      [userId, orderNumber],
+      [userId, orderNumber]
     );
 
-    if (rows.length === 0) {
+    if (orderResult.rows.length === 0) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    const order = rows[0];
-    const [items] = await db.query(
+    const order = orderResult.rows[0];
+
+    const itemsResult = await db.query(
       `
       SELECT oi.id, oi.product_id, oi.quantity, oi.price, oi.total_price,
              p.name AS product_name
       FROM order_items oi
       JOIN products p ON oi.product_id = p.id
-      WHERE oi.order_id = ?
+      WHERE oi.order_id = $1
       `,
-      [order.id],
+      [order.id]
     );
 
-    return res.json({ order, items });
+    return res.json({ order, items: itemsResult.rows });
   } catch (err) {
     console.error("GET ORDER DETAILS ERROR:", err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
+// ===================== UPDATE ORDER STATUS =====================
 exports.updateOrderStatus = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { orderNumber } = req.params;
     const { status } = req.body;
+
     await db.query(
-      `UPDATE orders SET status = ? WHERE user_id = ? AND order_number = ?`,
-      [status, userId, orderNumber],
+      `UPDATE orders SET status = $1 WHERE user_id = $2 AND order_number = $3`,
+      [status, userId, orderNumber]
     );
+
     return res.json({ message: "Order status updated ✅", status });
   } catch (err) {
     console.error("UPDATE ORDER STATUS ERROR:", err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
+// ===================== DELETE ORDER =====================
 exports.deleteOrderByNumber = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { orderNumber } = req.params;
-    const [result] = await db.query(
-      "DELETE FROM orders WHERE order_number = ? AND user_id = ?",
-      [orderNumber, userId],
+
+    const result = await db.query(
+      "DELETE FROM orders WHERE order_number = $1 AND user_id = $2",
+      [orderNumber, userId]
     );
 
-    if (result.affectedRows === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ message: "Order not found" });
     }
 
     return res.json({ message: "Order deleted successfully ✅" });
   } catch (err) {
     console.error("DELETE ORDER ERROR:", err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 };

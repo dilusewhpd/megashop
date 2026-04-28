@@ -8,17 +8,17 @@ exports.addToWishlist = async (req, res) => {
     const { productId } = req.body;
 
     // prevent duplicate
-    const [exists] = await db.query(
-      "SELECT * FROM wishlist WHERE user_id=? AND product_id=?",
+    const existsResult = await db.query(
+      "SELECT * FROM wishlist WHERE user_id=$1 AND product_id=$2",
       [userId, productId]
     );
 
-    if (exists.length > 0) {
+    if (existsResult.rows.length > 0) {
       return res.json({ message: "Already in wishlist" });
     }
 
     await db.query(
-      "INSERT INTO wishlist (id, user_id, product_id) VALUES (?, ?, ?)",
+      "INSERT INTO wishlist (id, user_id, product_id) VALUES ($1, $2, $3)",
       [uuidv4(), userId, productId]
     );
 
@@ -34,14 +34,14 @@ exports.getWishlist = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const [rows] = await db.query(`
+    const result = await db.query(`
       SELECT w.id, p.id as product_id, p.name, p.price, p.images
       FROM wishlist w
       JOIN products p ON w.product_id = p.id
-      WHERE w.user_id = ?
+      WHERE w.user_id = $1
     `, [userId]);
 
-    const wishlistWithImages = rows.map(item => {
+    const wishlistWithImages = result.rows.map(item => {
       let imagesArray = [];
       try {
         imagesArray = item.images ? JSON.parse(item.images) : [];
@@ -71,7 +71,7 @@ exports.removeFromWishlist = async (req, res) => {
     const { productId } = req.params;
 
     await db.query(
-      "DELETE FROM wishlist WHERE user_id=? AND product_id=?",
+      "DELETE FROM wishlist WHERE user_id=$1 AND product_id=$2",
       [userId, productId]
     );
 

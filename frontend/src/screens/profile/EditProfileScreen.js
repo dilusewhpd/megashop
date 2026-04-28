@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
 import { profileImages } from "../../utils/imageMapping";
 import { updateProfileApi, deleteProfileImageApi } from "../../api/userApi";
@@ -45,17 +46,48 @@ export default function EditProfileScreen({ navigation, route }) {
     if (storedToken) setToken(storedToken);
   };
 
+  // Convert image to base64 data URL for persistent storage
+  const convertImageToBase64 = async (uri) => {
+    try {
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      // Get file extension from URI
+      const extension = uri.split('.').pop().toLowerCase();
+      const mimeType = extension === 'jpg' ? 'jpeg' : extension;
+      return `data:image/${mimeType};base64,${base64}`;
+    } catch (error) {
+      console.log("Error converting image to base64:", error);
+      return null;
+    }
+  };
+
   const saveProfile = async () => {
     try {
       if (!token) return Alert.alert("Error", "You are not logged in!");
-      const res = await updateProfileApi(token, name, email, image);
+
+      // Prepare image for upload (convert base64 back to file if needed)
+      let imageToUpload = image;
+      if (image && image.startsWith('data:image/')) {
+        // For base64 images, we might need to handle differently
+        // For now, we'll send the base64 string and let the backend handle it
+        imageToUpload = image;
+      }
+
+      const res = await updateProfileApi(token, name, email, imageToUpload);
 
       if (res.data.message) {
         const storedUser = JSON.parse(await AsyncStorage.getItem("user")) || {};
         const updatedUser = { ...storedUser, fullName: name, email };
         await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
 
+        // Always save the current image to AsyncStorage for persistence
+        if (image) {
+          await AsyncStorage.setItem("profileImage", image);
+        }
+
         if (res.data.profileImage) {
+          // If backend returns a URL, use that instead
           setImage(res.data.profileImage);
           await AsyncStorage.setItem("profileImage", res.data.profileImage);
         }
@@ -81,7 +113,18 @@ export default function EditProfileScreen({ navigation, route }) {
       });
       if (!result.canceled) {
         const uri = result.assets[0].uri;
-        setImage(uri);
+
+        // Convert to base64 for persistent storage
+        const base64Image = await convertImageToBase64(uri);
+        if (base64Image) {
+          setImage(base64Image);
+          // Save base64 image to AsyncStorage for persistence
+          await AsyncStorage.setItem("profileImage", base64Image);
+        } else {
+          // Fallback to original URI if conversion fails
+          setImage(uri);
+          await AsyncStorage.setItem("profileImage", uri);
+        }
       }
     } catch (err) {
       console.log("Pick image error:", err);

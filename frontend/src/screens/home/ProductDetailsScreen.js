@@ -182,7 +182,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
         <View style={styles.pill}>
           <Ionicons name="star" size={14} color={PRIMARY} />
           <Text style={styles.pillText}>
-            {product.rating ?? "-"} ({product.review_count ?? 0})
+            {product.rating ?? "-"} ({product.review ?? 0})
           </Text>
         </View>
       </View>

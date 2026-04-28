@@ -21,15 +21,22 @@ export const updateProfileApi = (token, name, email, image = null) => {
   formData.append("fullName", name);
   formData.append("email", email);
 
-  if (image && image.startsWith("file://")) {
-    const filename = image.split("/").pop();
-    const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : `image`;
-    formData.append("profileImage", {
-      uri: image,
-      name: filename,
-      type,
-    });
+  if (image) {
+    if (image.startsWith("file://")) {
+      // Handle file URI (original behavior)
+      const filename = image.split("/").pop();
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : `image`;
+      formData.append("profileImage", {
+        uri: image,
+        name: filename,
+        type,
+      });
+    } else if (image.startsWith("data:image/")) {
+      // For base64 images, send as string for now
+      // Backend will need to handle base64 processing
+      formData.append("profileImage", image);
+    }
   }
 
   return api.put("/user", formData, {

@@ -47,8 +47,8 @@ export default function ProfileScreen({ navigation, setToken }) {
 
       await AsyncStorage.removeItem("token");
       await AsyncStorage.removeItem("user");
-
-      if (setToken) setToken(null);
+      await AsyncStorage.removeItem("profileImage");
+      setToken(null);
     } catch (err) {
       console.log("Logout error:", err?.response?.data || err.message);
     }

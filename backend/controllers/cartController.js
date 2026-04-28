@@ -6,7 +6,7 @@ exports.getCart = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const [rows] = await db.query(
+    const result = await db.query(
       `
       SELECT 
         c.id,
@@ -21,10 +21,12 @@ exports.getCart = async (req, res) => {
         p.images
       FROM cart_items c
       JOIN products p ON c.product_id = p.id
-      WHERE c.user_id = ?
+      WHERE c.user_id = $1
       `,
       [userId]
     );
+
+    const rows = result.rows;
 
     const cartItems = rows.map((item) => {
       const images =
@@ -60,29 +62,46 @@ exports.addToCart = async (req, res) => {
     const userId = req.user.userId;
     const { productId, quantity = 1, selectedColor = null, selectedSize = null } = req.body;
 
-    if (!productId) return res.status(400).json({ message: "productId is required" });
+    if (!productId)
+      return res.status(400).json({ message: "productId is required" });
 
-    const [prod] = await db.query("SELECT id FROM products WHERE id = ?", [productId]);
-    if (prod.length === 0) return res.status(404).json({ message: "Product not found" });
+    const prodResult = await db.query(
+      "SELECT id FROM products WHERE id = $1",
+      [productId]
+    );
 
-    const [existing] = await db.query(
-      `SELECT id, quantity FROM cart_items 
-       WHERE user_id = ? AND product_id = ? 
-       AND (selected_color <=> ?) AND (selected_size <=> ?)`,
+    if (prodResult.rows.length === 0)
+      return res.status(404).json({ message: "Product not found" });
+
+    const existingResult = await db.query(
+      `
+      SELECT id, quantity 
+      FROM cart_items 
+      WHERE user_id = $1 
+      AND product_id = $2 
+      AND (selected_color IS NOT DISTINCT FROM $3)
+      AND (selected_size IS NOT DISTINCT FROM $4)
+      `,
       [userId, productId, selectedColor, selectedSize]
     );
 
-    if (existing.length > 0) {
-      await db.query("UPDATE cart_items SET quantity = quantity + ? WHERE id = ?", [
-        quantity,
-        existing[0].id,
-      ]);
+    if (existingResult.rows.length > 0) {
+      await db.query(
+        "UPDATE cart_items SET quantity = quantity + $1 WHERE id = $2",
+        [quantity, existingResult.rows[0].id]
+      );
+
       return res.status(200).json({ message: "Cart updated ✅" });
     }
 
     const cartItemId = uuidv4();
+
     await db.query(
-      "INSERT INTO cart_items (id, user_id, product_id, quantity, selected_color, selected_size) VALUES (?, ?, ?, ?, ?, ?)",
+      `
+      INSERT INTO cart_items 
+      (id, user_id, product_id, quantity, selected_color, selected_size)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      `,
       [cartItemId, userId, productId, quantity, selectedColor, selectedSize]
     );
 
@@ -100,12 +119,22 @@ exports.updateCartItem = async (req, res) => {
     const { id } = req.params;
     const { quantity } = req.body;
 
-    if (!quantity || quantity < 1) return res.status(400).json({ message: "Quantity must be at least 1" });
+    if (!quantity || quantity < 1)
+      return res.status(400).json({ message: "Quantity must be at least 1" });
 
-    const [rows] = await db.query("SELECT id FROM cart_items WHERE id = ? AND user_id = ?", [id, userId]);
-    if (rows.length === 0) return res.status(404).json({ message: "Cart item not found" });
+    const check = await db.query(
+      "SELECT id FROM cart_items WHERE id = $1 AND user_id = $2",
+      [id, userId]
+    );
 
-    await db.query("UPDATE cart_items SET quantity = ? WHERE id = ?", [quantity, id]);
+    if (check.rows.length === 0)
+      return res.status(404).json({ message: "Cart item not found" });
+
+    await db.query(
+      "UPDATE cart_items SET quantity = $1 WHERE id = $2",
+      [quantity, id]
+    );
+
     return res.json({ message: "Cart item updated ✅" });
   } catch (err) {
     console.error("UPDATE CART ERROR:", err);
@@ -119,10 +148,16 @@ exports.removeCartItem = async (req, res) => {
     const userId = req.user.userId;
     const { id } = req.params;
 
-    const [rows] = await db.query("SELECT id FROM cart_items WHERE id = ? AND user_id = ?", [id, userId]);
-    if (rows.length === 0) return res.status(404).json({ message: "Cart item not found" });
+    const check = await db.query(
+      "SELECT id FROM cart_items WHERE id = $1 AND user_id = $2",
+      [id, userId]
+    );
 
-    await db.query("DELETE FROM cart_items WHERE id = ?", [id]);
+    if (check.rows.length === 0)
+      return res.status(404).json({ message: "Cart item not found" });
+
+    await db.query("DELETE FROM cart_items WHERE id = $1", [id]);
+
     return res.json({ message: "Item removed from cart ✅" });
   } catch (err) {
     console.error("REMOVE CART ERROR:", err);
@@ -134,7 +169,9 @@ exports.removeCartItem = async (req, res) => {
 exports.clearCart = async (req, res) => {
   try {
     const userId = req.user.userId;
-    await db.query("DELETE FROM cart_items WHERE user_id = ?", [userId]);
+
+    await db.query("DELETE FROM cart_items WHERE user_id = $1", [userId]);
+
     return res.json({ message: "Cart cleared ✅" });
   } catch (err) {
     return res.status(500).json({ message: "Server error" });
@@ -147,26 +184,51 @@ exports.applyPromo = async (req, res) => {
     const userId = req.user.userId;
     const { code } = req.body;
 
-    if (!code) return res.status(400).json({ message: "Promo code is required" });
+    if (!code)
+      return res.status(400).json({ message: "Promo code is required" });
 
-    const [promoRows] = await db.query("SELECT * FROM promo_codes WHERE code = ? AND is_active = 1", [code]);
-    if (promoRows.length === 0) return res.status(400).json({ success: false, message: "Invalid promo code" });
+    // ✅ FIXED HERE (is_active = true)
+    const promoResult = await db.query(
+      "SELECT * FROM promo_codes WHERE code = $1 AND is_active = true",
+      [code]
+    );
 
-    const promo = promoRows[0];
+    if (promoResult.rows.length === 0)
+      return res.status(400).json({
+        success: false,
+        message: "Invalid promo code",
+      });
 
-    const [cartRows] = await db.query(
-      `SELECT c.quantity, COALESCE(p.discount, 0) AS discount, COALESCE(p.price, 0) AS price, COALESCE(p.original_price, p.price, 0) AS original_price
-       FROM cart_items c
-       JOIN products p ON c.product_id = p.id
-       WHERE c.user_id = ?`,
+    const promo = promoResult.rows[0];
+
+    const cartResult = await db.query(
+      `
+      SELECT 
+        c.quantity,
+        COALESCE(p.discount, 0) AS discount,
+        COALESCE(p.price, 0) AS price,
+        COALESCE(p.original_price, p.price, 0) AS original_price
+      FROM cart_items c
+      JOIN products p ON c.product_id = p.id
+      WHERE c.user_id = $1
+      `,
       [userId]
     );
 
-    if (cartRows.length === 0) return res.status(400).json({ message: "Cart is empty" });
+    const cartRows = cartResult.rows;
+
+    if (cartRows.length === 0)
+      return res.status(400).json({ message: "Cart is empty" });
 
     let cartTotal = 0;
-    cartRows.forEach(item => {
-      const finalPrice = item.original_price - (item.original_price * item.discount) / 100;
+
+    cartRows.forEach((item) => {
+      const originalPrice = Number(item.original_price || item.price || 0);
+      const discount = Number(item.discount || 0);
+
+      const finalPrice =
+        originalPrice - (originalPrice * discount) / 100;
+
       cartTotal += finalPrice * item.quantity;
     });
 
@@ -177,9 +239,10 @@ exports.applyPromo = async (req, res) => {
       });
     }
 
-    let discountAmount = promo.discount_type === "percentage"
-      ? (cartTotal * promo.discount_value) / 100
-      : promo.discount_value;
+    let discountAmount =
+      promo.discount_type === "percentage"
+        ? (cartTotal * promo.discount_value) / 100
+        : promo.discount_value;
 
     const newTotal = cartTotal - discountAmount;
 
@@ -188,7 +251,7 @@ exports.applyPromo = async (req, res) => {
       promoId: promo.id,
       discountAmount: discountAmount.toFixed(2),
       newTotal: newTotal.toFixed(2),
-      message: `Promo code applied successfully!`,
+      message: "Promo code applied successfully!",
     });
   } catch (err) {
     console.error("APPLY PROMO ERROR:", err);
@@ -196,11 +259,12 @@ exports.applyPromo = async (req, res) => {
   }
 };
 
-// ===================== PROMO BANNERS FOR HOME =====================
+// ===================== PROMO BANNERS =====================
 exports.getPromoBanners = async (req, res) => {
   try {
-    const [rows] = await db.query(
-      `SELECT 
+    const result = await db.query(
+      `
+      SELECT 
         id,
         code,
         title,
@@ -209,12 +273,13 @@ exports.getPromoBanners = async (req, res) => {
         discount_value,
         min_order_amount,
         image_url
-       FROM promo_codes
-       WHERE is_active = 1
-       ORDER BY id DESC`
+      FROM promo_codes
+      WHERE is_active = true
+      ORDER BY id DESC
+      `
     );
 
-    return res.json({ promos: rows });
+    return res.json({ promos: result.rows });
   } catch (err) {
     console.error("GET PROMO BANNERS ERROR:", err);
     return res.status(500).json({

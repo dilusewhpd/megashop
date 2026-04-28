@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const tokenBlacklist = require("../utils/tokenBlacklist");
 
-module.exports = function authMiddleware(req, res, next) {
+module.exports = async function authMiddleware(req, res, next) {
   try {
     const header = req.headers.authorization;
 
@@ -12,7 +12,8 @@ module.exports = function authMiddleware(req, res, next) {
     const token = header.split(" ")[1];
 
     // Check if token is blacklisted
-    if (tokenBlacklist.has(token)) {
+    const isBlacklisted = await tokenBlacklist.has(token);
+    if (isBlacklisted) {
       return res.status(401).json({ message: "Token is invalidated. Please login again." });
     }
 

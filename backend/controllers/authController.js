@@ -16,12 +16,12 @@ exports.register = async (req, res) => {
     }
 
     // Check if user already exists
-    const [existing] = await db.query(
-      "SELECT id FROM users WHERE email = ?",
+    const existingResult = await db.query(
+      "SELECT id FROM users WHERE email = $1",
       [email]
     );
 
-    if (existing.length > 0) {
+    if (existingResult.rows.length > 0) {
       return res.status(409).json({
         message: "Email already registered",
       });
@@ -32,7 +32,7 @@ exports.register = async (req, res) => {
     const userId = uuidv4();
 
     await db.query(
-      "INSERT INTO users (id, email, password_hash, full_name) VALUES (?, ?, ?, ?)",
+      "INSERT INTO users (id, email, password_hash, full_name) VALUES ($1, $2, $3, $4)",
       [userId, email, hashedPassword, fullName]
     );
 
@@ -58,17 +58,17 @@ exports.login = async (req, res) => {
     }
 
     // Find user by email
-    const [rows] = await db.query(
-      "SELECT id, email, password_hash, full_name FROM users WHERE email = ?",
+    const result = await db.query(
+      "SELECT id, email, password_hash, full_name FROM users WHERE email = $1",
       [email]
     );
 
-    if (rows.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
     // Compare password
-    const user = rows[0];
+    const user = result.rows[0];
 
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) {
@@ -94,7 +94,7 @@ exports.login = async (req, res) => {
 };
 
 // Logout
-exports.logout = (req, res) => {
+exports.logout = async (req, res) => {
   try {
     const header = req.headers.authorization;
 
@@ -104,9 +104,13 @@ exports.logout = (req, res) => {
 
     const token = header.split(" ")[1];
 
-    console.log("LOGOUT TOKEN:", token); 
+    console.log("LOGOUT TOKEN:", token);
 
-    tokenBlacklist.add(token);
+    // Calculate expiration date (7 days from now, matching JWT expiration)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await tokenBlacklist.add(token, expiresAt);
 
     return res.json({ message: "Logout successful ✅" });
   } catch (err) {

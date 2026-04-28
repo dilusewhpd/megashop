@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useLayoutEffect, useRef } from "react";
+import React, { useEffect, useState, useLayoutEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -111,6 +111,24 @@ export default function HomeScreen({ navigation }) {
   initialize();
 }, []);
 
+  // ✅ Refresh wishlist when screen comes back into focus
+  useFocusEffect(
+    useCallback(() => {
+      const refreshWishlist = async () => {
+        try {
+          const token = await AsyncStorage.getItem("token");
+          const res = await getWishlistApi(token);
+          const wishlistIds = res.data.wishlist.map((p) => p.product_id);
+          setWishlist(wishlistIds);
+        } catch (err) {
+          console.log("Failed to refresh wishlist:", err);
+        }
+      };
+
+      refreshWishlist();
+    }, [])
+  );
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: "MegaShop",
@@ -190,7 +208,7 @@ const toggleWishlist = async (productId) => {
               <View style={styles.pill}>
                 <Ionicons name="star" size={14} color={PRIMARY} />
                 <Text style={styles.pillText}>
-                  {item.rating ?? "-"} ({item.review_count ?? 0})
+                  {item.rating ?? "-"} ({item.review ?? 0})
                 </Text>
               </View>
 

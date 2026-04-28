@@ -6,14 +6,14 @@ exports.getProfile = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const [rows] = await db.query(
-      "SELECT id, full_name, email, profile_image FROM users WHERE id = ?",
+    const result = await db.query(
+      "SELECT id, full_name, email, profile_image FROM users WHERE id = $1",
       [userId]
     );
 
-    if (rows.length === 0) return res.status(404).json({ message: "User not found" });
+    if (result.rows.length === 0) return res.status(404).json({ message: "User not found" });
 
-    const user = rows[0];
+    const user = result.rows[0];
     res.json({ user });
   } catch (err) {
     console.error("Get profile error:", err);
@@ -28,7 +28,7 @@ exports.updateProfile = async (req, res) => {
     const { fullName, email, profileImage } = req.body;
 
     await db.query(
-      "UPDATE users SET full_name = ?, email = ?, profile_image = ? WHERE id = ?",
+      "UPDATE users SET full_name = $1, email = $2, profile_image = $3 WHERE id = $4",
       [fullName, email, profileImage || null, userId]
     );
 
@@ -45,7 +45,7 @@ exports.deleteProfileImage = async (req, res) => {
     const userId = req.user.userId;
 
     await db.query(
-      "UPDATE users SET profile_image = NULL WHERE id = ?",
+      "UPDATE users SET profile_image = NULL WHERE id = $1",
       [userId]
     );
 

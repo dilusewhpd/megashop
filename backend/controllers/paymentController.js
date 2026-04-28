@@ -8,16 +8,16 @@ exports.createPayHerePayment = async (req, res) => {
     const { orderNumber } = req.body;
 
     // 1️⃣ Get order from DB
-    const [rows] = await db.query(
-      "SELECT * FROM orders WHERE user_id = ? AND order_number = ?",
+    const result = await db.query(
+      "SELECT * FROM orders WHERE user_id = $1 AND order_number = $2",
       [userId, orderNumber]
     );
 
-    if (rows.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    const order = rows[0];
+    const order = result.rows[0];
 
     // 2️⃣ Ensure order.total exists
     if (!order.total) {
@@ -118,7 +118,7 @@ exports.payHereNotify = async (req, res) => {
 
     // 2️⃣ Update order status if payment successful
     if (status_code == 2) {
-      await db.query("UPDATE orders SET status = ? WHERE order_number = ?", [
+      await db.query("UPDATE orders SET status = $1 WHERE order_number = $2", [
         "paid",
         order_id,
       ]);

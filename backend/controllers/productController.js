@@ -8,20 +8,23 @@ exports.getProducts = async (req, res) => {
     // Build the WHERE clause for filters
     let whereClause = "";
     let params = [];
+    let paramIndex = 1;
 
     if (category && category !== "all") {
-      whereClause += " WHERE category = ?";
+      whereClause += ` WHERE category = $${paramIndex}`;
       params.push(category);
+      paramIndex++;
     }
 
     if (minRating && minRating !== "all") {
       const ratingValue = parseFloat(minRating);
       if (whereClause) {
-        whereClause += " AND rating >= ?";
+        whereClause += ` AND rating >= $${paramIndex}`;
       } else {
-        whereClause += " WHERE rating >= ?";
+        whereClause += ` WHERE rating >= $${paramIndex}`;
       }
       params.push(ratingValue);
+      paramIndex++;
     }
 
     if (priceRange && priceRange !== "all") {
@@ -57,19 +60,19 @@ exports.getProducts = async (req, res) => {
     } else if (sortBy === "newest") {
       orderBy = "id DESC";
     } else if (sortBy === "most_popular") {
-      orderBy = "rating DESC, review_count DESC";
+      orderBy = "rating DESC, review DESC";
     } else if (sortBy === "most_sold") {
       orderBy = "sold_count DESC";
     }
 
-    const [rows] = await db.query(
-      `SELECT id, name, price, original_price, discount, rating, review_count, sold_count, seller, category, images, badges
+    const result = await db.query(
+      `SELECT id, name, price, original_price, discount, rating, review, sold_count, seller, category, images, badges
       FROM products${whereClause}
       ORDER BY ${orderBy}`,
       params
     );
 
-    res.json({ products: rows });
+    res.json({ products: result.rows });
   } catch (err) {
     console.error("GET PRODUCTS ERROR:", err);
     res.status(500).json({ message: "Server error", error: err.message });
@@ -79,11 +82,11 @@ exports.getProducts = async (req, res) => {
 // Get Categories
 exports.getCategories = async (req, res) => {
   try {
-    const [rows] = await db.query(
+    const result = await db.query(
       "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category"
     );
 
-    const categories = rows.map(row => row.category);
+    const categories = result.rows.map(row => row.category);
     res.json({ categories });
   } catch (err) {
     console.error("GET CATEGORIES ERROR:", err);
@@ -95,13 +98,13 @@ exports.getProductById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [rows] = await db.query("SELECT * FROM products WHERE id = ?", [id]);
+    const result = await db.query("SELECT * FROM products WHERE id = $1", [id]);
 
-    if (rows.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    return res.json({ product: rows[0] });
+    return res.json({ product: result.rows[0] });
   } catch (err) {
     console.error("GET PRODUCT BY ID ERROR:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
