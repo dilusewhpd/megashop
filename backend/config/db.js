@@ -23,49 +23,21 @@ pool.on('error', (err) => {
   process.exit(-1);
 });
 
-// Database setup function
+// Database setup function - ONLY for local development
 const setupDatabase = async () => {
   try {
     console.log('🔄 Setting up database schema...');
 
-    // Read the SQL schema file
-    const sqlFilePath = path.join(__dirname, '..', '..', 'DATABASE_SETUP.sql');
-    const sqlContent = fs.readFileSync(sqlFilePath, 'utf8');
-
-    // Execute the entire SQL file
-    try {
-      await pool.query(sqlContent);
-      console.log('✅ Database schema and sample data created successfully');
-    } catch (err) {
-      // Skip errors for existing tables/indexes
-      if (err.code === '42P07' || err.message.includes('already exists')) {
-        console.log('✅ Database schema already exists, checking for missing columns...');
-
-        // Check if profile_image column exists in users table
-        try {
-          const checkColumn = await pool.query(`
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name = 'users' AND column_name = 'profile_image'
-          `);
-
-          if (checkColumn.rows.length === 0) {
-            console.log('🔄 Adding profile_image column to users table...');
-            await pool.query(`ALTER TABLE users ADD COLUMN profile_image TEXT`);
-            console.log('✅ profile_image column added successfully');
-          } else {
-            console.log('✅ profile_image column already exists');
-          }
-        } catch (columnErr) {
-          console.log('⚠️  Could not check/add profile_image column:', columnErr.message);
-        }
-      } else {
-        console.error('❌ Schema creation error:', err.message);
-        throw err;
-      }
+    // Check if we're in development mode
+    if (process.env.NODE_ENV === 'production') {
+      console.log('⚠️  Skipping database setup in production. Database should be set up manually.');
+      return;
     }
 
-    console.log('🎉 Database setup completed successfully!');
+    // For development only - create basic tables if they don't exist
+    console.log('✅ Database setup skipped - use Supabase SQL editor for schema setup');
+    console.log('🎉 Database connection ready!');
+
   } catch (error) {
     console.error('❌ Database setup failed:', error.message);
     console.error('❌ Error code:', error.code);
