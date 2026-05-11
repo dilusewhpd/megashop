@@ -6,4 +6,4 @@
 // Production URL (update this with your Vercel/Render deployment URL)
 export const API_BASE_URL = __DEV__
   ? "http://localhost:5000"
-  : "https://megashop-backend.vercel.app"; // Your deployed Vercel URL
+  : "https://megashop-backend.vercel.app";
