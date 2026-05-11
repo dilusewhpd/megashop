@@ -4,6 +4,7 @@
 // For Android emulator: use "http://10.0.2.2:5000"
 
 // Production URL (update this with your Vercel/Render deployment URL)
-export const API_BASE_URL = __DEV__
+/*export const API_BASE_URL = __DEV__
   ? "http://localhost:5000"
-  : "https://megashop-backend.vercel.app";
+  : "https://megashop-backend.vercel.app";*/
+export const API_BASE_URL = "https://megashop-mocha.vercel.app";

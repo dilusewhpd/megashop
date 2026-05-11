@@ -11,11 +11,17 @@ import {
   Platform,
   Animated,
   Dimensions,
+  Linking,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { API_BASE_URL } from "../config/constants.js";
 
-const API_BASE = "http://localhost:5000";
+// For Android emulator: use 10.0.2.2 to reach host machine
+// For physical devices: use production URL
+
+const API_BASE = API_BASE_URL;
+
 const PRIMARY = "#2e7d32";
 const BACKGROUND = "#f4fbf4";
 const ACTIVE_COLOR = "#e8f5e9";
@@ -147,20 +153,8 @@ const orderRes = await axios.post(
   };
 
   const redirectToPayHere = (paymentData) => {
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = "https://sandbox.payhere.lk/pay/checkout";
-
-    Object.entries(paymentData).forEach(([key, value]) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = key;
-      input.value = value;
-      form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-    form.submit();
+    // Always use WebView for PayHere payment
+    navigation.navigate("PayHerePayment", { paymentData });
   };
 
   const getInputStyle = (field) => ({
