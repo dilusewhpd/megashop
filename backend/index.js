@@ -48,6 +48,11 @@ app.get("/db-test", async (req, res) => {
   }
 });
 
+// test route
+app.get("/", (req, res) => {
+  res.send("MegaShop Backend Running Successfully");
+});
+
 
 // start server
 const PORT = process.env.PORT || 5000;
