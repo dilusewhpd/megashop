@@ -122,6 +122,8 @@ export default function CheckoutScreen({ navigation, route }) {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
+      console.log("PAYHERE CREATE RESPONSE:", payRes.data);
+
       if (!payRes.data) {
         return showToast("Failed to create PayHere payment.");
       }
@@ -137,13 +139,15 @@ export default function CheckoutScreen({ navigation, route }) {
 
   // ✅ FIXED PAYHERE REDIRECT (MAIN FIX)
  const redirectToPayHere = async (paymentData) => {
+  console.log("PAYHERE PAYMENT DATA:", paymentData);
+
   const query = Object.keys(paymentData)
-    .map(
-      (key) =>
-        encodeURIComponent(key) +
-        "=" +
-        encodeURIComponent(paymentData[key])
-    )
+    .map((key) => {
+      const value = paymentData[key];
+      const normalized =
+        value === true ? "true" : value === false ? "false" : value ?? "";
+      return encodeURIComponent(key) + "=" + encodeURIComponent(normalized);
+    })
     .join("&");
 
   const url = `https://sandbox.payhere.lk/pay/checkout?${query}`;
