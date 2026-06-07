@@ -26,6 +26,9 @@ exports.createPayHerePayment = async (req, res) => {
 
     const merchant_id = process.env.PAYHERE_MERCHANT_ID;
     const merchant_secret = process.env.PAYHERE_MERCHANT_SECRET;
+    const returnUrl = process.env.PAYHERE_RETURN_URL || "https://megashop.com/payment/success";
+    const cancelUrl = process.env.PAYHERE_CANCEL_URL || "https://megashop.com/payment/cancel";
+    const notifyUrl = process.env.PAYHERE_NOTIFY_URL || "https://megashop.com/payment/notify";
 
     const amount = Number(order.total).toFixed(2); // ✅ exact total stored in DB
     const currency = "LKR";
@@ -49,9 +52,9 @@ exports.createPayHerePayment = async (req, res) => {
     res.json({
       sandbox: true, // PayHere sandbox mode
       merchant_id,
-      return_url: "https://megashop-mocha.vercel.app/payment/success",
-      cancel_url: "https://megashop-mocha.vercel.app/payment/cancel",
-      notify_url: "https://megashop-mocha.vercel.app/payment/notify",
+      return_url: returnUrl,
+      cancel_url: cancelUrl,
+      notify_url: notifyUrl,
       order_id: order.order_number,
       items: "MegaShop Order",
 
