@@ -15,10 +15,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { API_BASE_URL } from "../config/constants.js";
-
-// For Android emulator: use 10.0.2.2 to reach host machine
-// For physical devices: use production URL
+import { API_BASE_URL } from "../../config/constants.js";
 
 const API_BASE = API_BASE_URL;
 
@@ -33,8 +30,8 @@ export default function CheckoutScreen({ navigation, route }) {
   const {
     cartItems = [],
     total: totalFromCart = 0,
-    promoDiscount = 0, // 🔹 receive promo discount from CartScreen
-  } = route.params; // 🔹 receive final total from CartScreen
+    promoDiscount = 0,
+  } = route.params;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -43,11 +40,9 @@ export default function CheckoutScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState("");
 
-  // Toast state
   const [toastMessage, setToastMessage] = useState("");
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Order summary
   const orderSummary = useMemo(() => {
     let totalItems = 0;
 
@@ -59,13 +54,12 @@ export default function CheckoutScreen({ navigation, route }) {
 
     return {
       totalItems,
-      fullPrice: finalTotal + Number(promoDiscount || 0), // ✅ key fix
+      fullPrice: finalTotal + Number(promoDiscount || 0),
       promoDiscount: Number(promoDiscount || 0),
       finalTotal: finalTotal,
     };
   }, [cartItems, totalFromCart, promoDiscount]);
 
-  // Show toast at top for 3s
   const showToast = (msg) => {
     setToastMessage(msg);
     Animated.timing(fadeAnim, {
@@ -73,18 +67,16 @@ export default function CheckoutScreen({ navigation, route }) {
       duration: 300,
       useNativeDriver: true,
     }).start();
+
     setTimeout(() => {
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 300,
         useNativeDriver: true,
-      }).start(() => {
-        setToastMessage("");
-      });
+      }).start(() => setToastMessage(""));
     }, 3000);
   };
 
-  // Validation
   const validate = () => {
     const tName = name.trim(),
       tEmail = email.trim(),
@@ -102,46 +94,37 @@ export default function CheckoutScreen({ navigation, route }) {
     return true;
   };
 
-  // Checkout
   const handleCheckout = async () => {
     if (!validate()) return;
 
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem("token");
-      if (!token) return showToast("Please login first.") || false;
 
-      // Send promoCode instead of totalAmount
-      // After checkout
-      // 🔹 send final total along with promoCode
-const orderRes = await axios.post(
-  `${API_BASE}/orders/checkout`,
-  {
-    paymentMethod: "ONLINE",
-    shippingAddress: { name, email, phone, address },
-    promoCode: route.params.promoCode || null,
-    totalAmount: orderSummary.finalTotal, // 🔹 pass final total
-  },
-  { headers: { Authorization: `Bearer ${token}` } },
-);
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return showToast("Please login first.");
+
+      const orderRes = await axios.post(
+        `${API_BASE}/orders/checkout`,
+        {
+          paymentMethod: "ONLINE",
+          shippingAddress: { name, email, phone, address },
+          promoCode: route.params.promoCode || null,
+          totalAmount: orderSummary.finalTotal,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
 
       const { orderNumber, total } = orderRes.data;
 
-      // Send total to backend payment creation
       const payRes = await axios.post(
         `${API_BASE}/payment/create`,
-        { orderNumber, amount: total }, // 🔹 pass total
+        { orderNumber, amount: total },
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      if (!payRes.data)
-        return showToast("Failed to create PayHere payment.") || false;
-
-      await axios.patch(
-        `${API_BASE}/orders/${orderNumber}/pay`,
-        { status: "Paid" },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      if (!payRes.data) {
+        return showToast("Failed to create PayHere payment.");
+      }
 
       redirectToPayHere(payRes.data);
     } catch (err) {
@@ -152,10 +135,33 @@ const orderRes = await axios.post(
     }
   };
 
-  const redirectToPayHere = (paymentData) => {
-    // Always use WebView for PayHere payment
-    navigation.navigate("PayHerePayment", { paymentData });
-  };
+  // ✅ FIXED PAYHERE REDIRECT (MAIN FIX)
+ const redirectToPayHere = async (paymentData) => {
+  const query = Object.keys(paymentData)
+    .map(
+      (key) =>
+        encodeURIComponent(key) +
+        "=" +
+        encodeURIComponent(paymentData[key])
+    )
+    .join("&");
+
+  const url = `https://sandbox.payhere.lk/pay/checkout?${query}`;
+
+  console.log("PAYHERE FINAL URL:", url);
+
+  try {
+    const supported = await Linking.canOpenURL(url);
+
+    if (supported) {
+      await Linking.openURL(url);
+    } else {
+      console.log("Cannot open PayHere URL");
+    }
+  } catch (err) {
+    console.log("PayHere open error:", err);
+  }
+};
 
   const getInputStyle = (field) => ({
     ...styles.input,
@@ -174,21 +180,21 @@ const orderRes = await axios.post(
         </Animated.View>
       ) : null}
 
-      <ScrollView
-        contentContainerStyle={{ padding: 16 }}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
         {/* Order Summary */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Order Summary</Text>
+
           <View style={styles.summaryRow}>
             <Text>Total Items</Text>
             <Text>{orderSummary.totalItems}</Text>
           </View>
+
           <View style={styles.summaryRow}>
             <Text>Full Price</Text>
             <Text>Rs. {orderSummary.fullPrice}</Text>
           </View>
+
           {orderSummary.promoDiscount > 0 && (
             <View style={styles.summaryRow}>
               <Text>Promo Discount</Text>
@@ -198,24 +204,18 @@ const orderRes = await axios.post(
             </View>
           )}
         </View>
-        <View
-          style={[
-            styles.summaryRow,
-            {
-              borderTopWidth: 1,
-              borderTopColor: BORDER_COLOR,
-              marginTop: 8,
-              paddingTop: 8,
-            },
-          ]}
-        >
+
+        <View style={styles.summaryRow}>
           <Text style={styles.finalTotal}>Total</Text>
-          <Text style={styles.finalTotal}>Rs. {orderSummary.finalTotal}</Text>
+          <Text style={styles.finalTotal}>
+            Rs. {orderSummary.finalTotal}
+          </Text>
         </View>
 
         {/* Delivery Details */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Delivery Details</Text>
+
           <TextInput
             style={getInputStyle("name")}
             placeholder="Full Name"
@@ -224,33 +224,29 @@ const orderRes = await axios.post(
             onFocus={() => setFocusedField("name")}
             onBlur={() => setFocusedField("")}
           />
+
           <TextInput
             style={getInputStyle("email")}
             placeholder="Email"
             value={email}
             onChangeText={setEmail}
-            keyboardType="email-address"
-            onFocus={() => setFocusedField("email")}
-            onBlur={() => setFocusedField("")}
           />
+
           <TextInput
             style={getInputStyle("phone")}
             placeholder="Phone"
             value={phone}
             onChangeText={setPhone}
-            keyboardType="phone-pad"
-            onFocus={() => setFocusedField("phone")}
-            onBlur={() => setFocusedField("")}
           />
+
           <TextInput
             style={[getInputStyle("address"), { height: 100 }]}
             placeholder="Delivery Address"
             value={address}
             onChangeText={setAddress}
             multiline
-            onFocus={() => setFocusedField("address")}
-            onBlur={() => setFocusedField("")}
           />
+
           <Pressable
             style={styles.button}
             onPress={handleCheckout}
@@ -271,59 +267,61 @@ const orderRes = await axios.post(
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
-    borderRadius: 16,
     padding: 16,
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: BORDER_COLOR,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 12,
     color: PRIMARY,
+    marginBottom: 10,
   },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  discount: { color: ERROR_COLOR, fontWeight: "700" },
-  finalTotal: { fontSize: 16, fontWeight: "800", color: PRIMARY },
-  input: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
-    marginBottom: 12,
+  discount: {
+    color: ERROR_COLOR,
+    fontWeight: "700",
+  },
+  finalTotal: {
     fontSize: 16,
+    fontWeight: "800",
+    color: PRIMARY,
+  },
+  input: {
     borderWidth: 1,
     borderColor: BORDER_COLOR,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
   },
   button: {
     backgroundColor: PRIMARY,
-    paddingVertical: 16,
-    borderRadius: 14,
+    padding: 14,
+    borderRadius: 12,
     alignItems: "center",
     marginTop: 10,
   },
-  buttonText: { color: "#fff", fontWeight: "800", fontSize: 16 },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
   toast: {
     position: "absolute",
     top: 40,
     alignSelf: "center",
     backgroundColor: ERROR_COLOR,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    padding: 10,
     borderRadius: 8,
     zIndex: 999,
-    width: SCREEN_WIDTH * 0.9,
-    elevation: 5,
   },
-  toastText: { color: "#fff", fontWeight: "700", textAlign: "center" },
+  toastText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
 });

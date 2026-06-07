@@ -134,10 +134,10 @@ exports.createPayment = async (req, res) => {
     const finalAmount = amount || order.total;
 
     return res.json({
-      merchant_id: "YOUR_MERCHANT_ID",
-      return_url: "http://localhost:5000/payment/success",
-      cancel_url: "http://localhost:5000/payment/cancel",
-      notify_url: "http://localhost:5000/payment/notify",
+      merchant_id: process.env.PAYHERE_MERCHANT_ID,
+      return_url: "https://megashop-mocha.vercel.app/payment/success",
+      cancel_url: "https://megashop-mocha.vercel.app/payment/cancel",
+      notify_url: process.env.PAYHERE_NOTIFY_URL,
       order_id: orderNumber,
       items: "Order Payment",
       currency: "LKR",

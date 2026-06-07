@@ -13,8 +13,9 @@ import { Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { API_BASE_URL } from "../../config/constants.js";
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = API_BASE_URL ;
 
 // Theme
 const PRIMARY = "#2e7d32";

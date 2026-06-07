@@ -10,7 +10,7 @@ exports.createPayHerePayment = async (req, res) => {
     // 1️⃣ Get order from DB
     const result = await db.query(
       "SELECT * FROM orders WHERE user_id = $1 AND order_number = $2",
-      [userId, orderNumber]
+      [userId, orderNumber],
     );
 
     if (result.rows.length === 0) {
@@ -40,11 +40,7 @@ exports.createPayHerePayment = async (req, res) => {
     const hash = crypto
       .createHash("md5")
       .update(
-        merchant_id +
-          order.order_number +
-          amount +
-          currency +
-          hashedSecret
+        merchant_id + order.order_number + amount + currency + hashedSecret,
       )
       .digest("hex")
       .toUpperCase();
@@ -53,10 +49,9 @@ exports.createPayHerePayment = async (req, res) => {
     res.json({
       sandbox: true, // PayHere sandbox mode
       merchant_id,
-      return_url: "http://localhost:5000/payment/success",
-      cancel_url: "http://localhost:5000/payment/cancel",
-      notify_url: process.env.PAYHERE_NOTIFY_URL,
-
+      return_url: "https://megashop-mocha.vercel.app/payment/success",
+      cancel_url: "https://megashop-mocha.vercel.app/payment/cancel",
+      notify_url: "https://megashop-mocha.vercel.app/payment/notify",
       order_id: order.order_number,
       items: "MegaShop Order",
 
@@ -107,7 +102,7 @@ exports.payHereNotify = async (req, res) => {
             .createHash("md5")
             .update(merchant_secret)
             .digest("hex")
-            .toUpperCase()
+            .toUpperCase(),
       )
       .digest("hex")
       .toUpperCase();
