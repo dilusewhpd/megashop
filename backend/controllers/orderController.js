@@ -132,9 +132,9 @@ exports.createPayment = async (req, res) => {
 
     const order = orderResult.rows[0];
     const finalAmount = amount || order.total;
-    const returnUrl = process.env.PAYHERE_RETURN_URL || "https://megashop.com/payment/success";
-    const cancelUrl = process.env.PAYHERE_CANCEL_URL || "https://megashop.com/payment/cancel";
-    const notifyUrl = process.env.PAYHERE_NOTIFY_URL || "https://megashop.com/payment/notify";
+    const returnUrl = process.env.PAYHERE_RETURN_URL || "https://megashop-mocha.vercel.app/payment/success";
+    const cancelUrl = process.env.PAYHERE_CANCEL_URL || "https://megashop-mocha.vercel.app/payment/cancel";
+    const notifyUrl = process.env.PAYHERE_NOTIFY_URL || "https://megashop-mocha.vercel.app/payment/notify";
 
     return res.json({
       sandbox: true,
