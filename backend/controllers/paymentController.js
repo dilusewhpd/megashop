@@ -50,17 +50,24 @@ exports.createPayHerePayment = async (req, res) => {
       });
     }
 
-    // ✅ FIX: strict format
-    const amount = parseFloat(order.total).toFixed(2);
+    // ✅ FIX: strict format and single source of truth
+    const amount = Number(order.total).toFixed(2);
     const currency = "LKR";
 
     const md5 = (value) =>
       crypto.createHash("md5").update(value).digest("hex").toUpperCase();
 
-    const decodedSecret = Buffer.from(merchant_secret, "base64").toString("utf8");
-    const hashedSecret = md5(decodedSecret.trim());
+    const hashedSecret = md5(merchant_secret.trim());
 
     const orderId = String(order.order_number).trim();
+
+    console.log("FINAL PAYHERE CHECK:", {
+      merchant_id,
+      orderId,
+      amount,
+      currency,
+      secretLength: merchant_secret.length,
+    });
 
     const hash = md5(
       merchant_id + orderId + amount + currency + hashedSecret
@@ -149,8 +156,7 @@ exports.payHereNotify = async (req, res) => {
     const md5 = (value) =>
       crypto.createHash("md5").update(value).digest("hex").toUpperCase();
 
-    const decodedSecret = Buffer.from(merchant_secret, "base64").toString("utf8");
-    const hashedSecret = md5(decodedSecret.trim());
+    const hashedSecret = md5(merchant_secret.trim());
 
     const localMd5 = md5(
       merchant_id +
@@ -160,6 +166,17 @@ exports.payHereNotify = async (req, res) => {
         status_code +
         hashedSecret
     );
+
+    console.log("PAYHERE NOTIFY CHECK:", {
+      merchant_id,
+      order_id,
+      payhere_amount,
+      payhere_currency,
+      status_code,
+      secretLength: merchant_secret.length,
+      localMd5,
+      md5sig,
+    });
 
     if (localMd5 !== md5sig) {
       return res.status(400).send("Invalid signature");
