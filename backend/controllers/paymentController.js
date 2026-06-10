@@ -41,7 +41,7 @@ exports.createPayHerePayment = async (req, res) => {
 
     const notifyUrl = normalizeUrl(
       process.env.PAYHERE_NOTIFY_URL ||
-        "https://megashop-mocha.vercel.app/api/payhere/notify"
+        "https://megashop-mocha.vercel.app/payment/notify"
     ); // ✅ FIX: backend route
 
     if (!merchant_id || !merchant_secret) {
