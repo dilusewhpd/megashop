@@ -150,7 +150,7 @@ export default function CheckoutScreen({ navigation, route }) {
     })
     .join("&");
 
-  const url = `https://sandbox.payhere.lk/pay/checkout?${query}`;
+  const url = "https://sandbox.payhere.lk/pay/checkout?${query}";
 
   console.log("PAYHERE FINAL URL:", url);
 
