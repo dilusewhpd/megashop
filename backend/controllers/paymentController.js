@@ -82,6 +82,9 @@ exports.createPayHerePayment = async (req, res) => {
       returnUrl,
       cancelUrl,
       notifyUrl,
+      envReturnUrl: process.env.PAYHERE_RETURN_URL,
+      envCancelUrl: process.env.PAYHERE_CANCEL_URL,
+      envNotifyUrl: process.env.PAYHERE_NOTIFY_URL,
     });
 
     // 4️⃣ Build payload and log full payload for deployed debugging
