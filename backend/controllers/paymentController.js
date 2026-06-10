@@ -50,7 +50,7 @@ exports.createPayHerePayment = async (req, res) => {
 
     // 4️⃣ Send all required fields to frontend
     res.json({
-      sandbox: true, // PayHere sandbox mode
+      sandbox: "true", // PayHere sandbox mode
       merchant_id,
       return_url: returnUrl,
       cancel_url: cancelUrl,

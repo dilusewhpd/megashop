@@ -159,6 +159,8 @@ export default function CheckoutScreen({ navigation, route }) {
       const form = document.createElement("form");
       form.method = "POST";
       form.action = payHereUrl;
+      form.target = "_self";
+      form.enctype = "application/x-www-form-urlencoded";
       form.style.display = "none";
 
       Object.entries(paymentData).forEach(([key, value]) => {
