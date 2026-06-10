@@ -57,8 +57,8 @@ exports.createPayHerePayment = async (req, res) => {
     const md5 = (value) =>
       crypto.createHash("md5").update(value).digest("hex").toUpperCase();
 
-    // ✅ FIX: trim secret (VERY IMPORTANT)
-    const hashedSecret = md5(merchant_secret.trim());
+    const decodedSecret = Buffer.from(merchant_secret, "base64").toString("utf8");
+    const hashedSecret = md5(decodedSecret.trim());
 
     const orderId = String(order.order_number).trim();
 
@@ -149,8 +149,8 @@ exports.payHereNotify = async (req, res) => {
     const md5 = (value) =>
       crypto.createHash("md5").update(value).digest("hex").toUpperCase();
 
-    // ✅ FIX: trim secret
-    const hashedSecret = md5(merchant_secret.trim());
+    const decodedSecret = Buffer.from(merchant_secret, "base64").toString("utf8");
+    const hashedSecret = md5(decodedSecret.trim());
 
     const localMd5 = md5(
       merchant_id +
