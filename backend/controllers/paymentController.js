@@ -109,6 +109,7 @@ exports.createPayHerePayment = async (req, res) => {
     };
 
     console.log("PAYHERE PAYLOAD:", payload);
+    console.log("PAYHERE PAYLOAD JSON:", JSON.stringify(payload));
     res.json(payload);
   } catch (err) {
     console.error("PAYMENT ERROR:", err);
