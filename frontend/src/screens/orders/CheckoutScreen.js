@@ -150,20 +150,15 @@ export default function CheckoutScreen({ navigation, route }) {
     })
     .join("&");
 
-  const url = "https://sandbox.payhere.lk/pay/checkout?${query}";
+  const url = `https://sandbox.payhere.lk/pay/checkout?${query}`;
 
   console.log("PAYHERE FINAL URL:", url);
 
   try {
-    const supported = await Linking.canOpenURL(url);
-
-    if (supported) {
-      await Linking.openURL(url);
-    } else {
-      console.log("Cannot open PayHere URL");
-    }
+    await Linking.openURL(url);
   } catch (err) {
     console.log("PayHere open error:", err);
+    showToast("Unable to open PayHere. Please try again or use a browser.");
   }
 };
 
