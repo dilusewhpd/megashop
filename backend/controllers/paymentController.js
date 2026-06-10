@@ -83,8 +83,8 @@ exports.createPayHerePayment = async (req, res) => {
       notifyUrl,
     });
 
-    // 4️⃣ Send all required fields to frontend
-    res.json({
+    // 4️⃣ Build payload and log full payload for deployed debugging
+    const payload = {
       sandbox: true, // PayHere sandbox mode (boolean)
       merchant_id,
       return_url: returnUrl,
@@ -106,7 +106,10 @@ exports.createPayHerePayment = async (req, res) => {
       country,
 
       hash,
-    });
+    };
+
+    console.log("PAYHERE PAYLOAD:", payload);
+    res.json(payload);
   } catch (err) {
     console.error("PAYMENT ERROR:", err);
     res.status(500).json({ message: "Server error" });
