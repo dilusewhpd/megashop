@@ -150,16 +150,33 @@ export default function CheckoutScreen({ navigation, route }) {
     })
     .join("&");
 
-  const url = `https://sandbox.payhere.lk/pay/checkout?${query}`;
+  const payHereUrl = "https://sandbox.payhere.lk/pay/checkout";
 
-  console.log("PAYHERE FINAL URL:", url);
+  console.log("PAYHERE FINAL URL:", payHereUrl, query);
 
   try {
     if (Platform.OS === "web") {
-      window.location.href = url;
-    } else {
-      await Linking.openURL(url);
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = payHereUrl;
+      form.style.display = "none";
+
+      Object.entries(paymentData).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value =
+          value === true ? "true" : value === false ? "false" : value ?? "";
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+      return;
     }
+
+    const url = `${payHereUrl}?${query}`;
+    await Linking.openURL(url);
   } catch (err) {
     console.log("PayHere open error:", err);
     showToast("Unable to open PayHere. Please try again or use a browser.");
