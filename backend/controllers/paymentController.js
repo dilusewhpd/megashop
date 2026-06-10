@@ -26,32 +26,45 @@ exports.createPayHerePayment = async (req, res) => {
 
     const merchant_id = process.env.PAYHERE_MERCHANT_ID;
     const merchant_secret = process.env.PAYHERE_MERCHANT_SECRET;
+
     const normalizeUrl = (url) => (url || "").replace(/^http:/i, "https:");
-    const returnUrl = normalizeUrl(process.env.PAYHERE_RETURN_URL || "https://megashop-mocha.vercel.app/payment/success");
-    const cancelUrl = normalizeUrl(process.env.PAYHERE_CANCEL_URL || "https://megashop-mocha.vercel.app/payment/cancel");
-    const notifyUrl = normalizeUrl(process.env.PAYHERE_NOTIFY_URL || "https://megashop-mocha.vercel.app/payment/notify");
+
+    const returnUrl = normalizeUrl(
+      process.env.PAYHERE_RETURN_URL ||
+        "https://megashop-mocha.vercel.app/payment/success"
+    );
+
+    const cancelUrl = normalizeUrl(
+      process.env.PAYHERE_CANCEL_URL ||
+        "https://megashop-mocha.vercel.app/payment/cancel"
+    );
+
+    const notifyUrl = normalizeUrl(
+      process.env.PAYHERE_NOTIFY_URL ||
+        "https://megashop-mocha.vercel.app/api/payhere/notify"
+    ); // ✅ FIX: backend route
 
     if (!merchant_id || !merchant_secret) {
-      return res.status(500).json({ message: "PayHere merchant credentials are not configured" });
+      return res.status(500).json({
+        message: "PayHere merchant credentials are not configured",
+      });
     }
 
-    const amount = Number(order.total).toFixed(2); // ✅ exact total stored in DB
+    // ✅ FIX: strict format
+    const amount = parseFloat(order.total).toFixed(2);
     const currency = "LKR";
 
-    // 3️⃣ Hash generation for PayHere
-    const hashedSecret = crypto
-      .createHash("md5")
-      .update(merchant_secret)
-      .digest("hex")
-      .toUpperCase();
+    const md5 = (value) =>
+      crypto.createHash("md5").update(value).digest("hex").toUpperCase();
 
-    const hash = crypto
-      .createHash("md5")
-      .update(
-        merchant_id + order.order_number + amount + currency + hashedSecret,
-      )
-      .digest("hex")
-      .toUpperCase();
+    // ✅ FIX: trim secret (VERY IMPORTANT)
+    const hashedSecret = md5(merchant_secret.trim());
+
+    const orderId = String(order.order_number).trim();
+
+    const hash = md5(
+      merchant_id + orderId + amount + currency + hashedSecret
+    );
 
     // 4️⃣ Use shipping_address from order when available
     let shipping = {};
@@ -72,29 +85,26 @@ exports.createPayHerePayment = async (req, res) => {
     const city = shipping.city || "Colombo";
     const country = shipping.country || "Sri Lanka";
 
-    // Debug log to verify exact payload and hash
+    // Debug log
     console.log("PAYHERE DEBUG:", {
       merchant_id,
       amount,
       currency,
-      order_id: order.order_number,
+      order_id: orderId,
       hash,
       returnUrl,
       cancelUrl,
       notifyUrl,
-      envReturnUrl: process.env.PAYHERE_RETURN_URL,
-      envCancelUrl: process.env.PAYHERE_CANCEL_URL,
-      envNotifyUrl: process.env.PAYHERE_NOTIFY_URL,
     });
 
-    // 4️⃣ Build payload and log full payload for deployed debugging
+    // 4️⃣ Payload
     const payload = {
-      sandbox: true, // PayHere sandbox mode (boolean)
+      sandbox: true,
       merchant_id,
       return_url: returnUrl,
       cancel_url: cancelUrl,
       notify_url: notifyUrl,
-      order_id: order.order_number,
+      order_id: orderId,
       items: "MegaShop Order",
 
       currency,
@@ -114,6 +124,7 @@ exports.createPayHerePayment = async (req, res) => {
 
     console.log("PAYHERE PAYLOAD:", payload);
     console.log("PAYHERE PAYLOAD JSON:", JSON.stringify(payload));
+
     res.json(payload);
   } catch (err) {
     console.error("PAYMENT ERROR:", err);
@@ -135,34 +146,30 @@ exports.payHereNotify = async (req, res) => {
 
     const merchant_secret = process.env.PAYHERE_MERCHANT_SECRET;
 
-    // 1️⃣ Validate hash
-    const localMd5 = crypto
-      .createHash("md5")
-      .update(
-        merchant_id +
-          order_id +
-          payhere_amount +
-          payhere_currency +
-          status_code +
-          crypto
-            .createHash("md5")
-            .update(merchant_secret)
-            .digest("hex")
-            .toUpperCase(),
-      )
-      .digest("hex")
-      .toUpperCase();
+    const md5 = (value) =>
+      crypto.createHash("md5").update(value).digest("hex").toUpperCase();
+
+    // ✅ FIX: trim secret
+    const hashedSecret = md5(merchant_secret.trim());
+
+    const localMd5 = md5(
+      merchant_id +
+        order_id +
+        payhere_amount +
+        payhere_currency +
+        status_code +
+        hashedSecret
+    );
 
     if (localMd5 !== md5sig) {
       return res.status(400).send("Invalid signature");
     }
 
-    // 2️⃣ Update order status if payment successful
     if (status_code == 2) {
-      await db.query("UPDATE orders SET status = $1 WHERE order_number = $2", [
-        "paid",
-        order_id,
-      ]);
+      await db.query(
+        "UPDATE orders SET status = $1 WHERE order_number = $2",
+        ["paid", order_id]
+      );
     }
 
     res.sendStatus(200);
