@@ -155,7 +155,11 @@ export default function CheckoutScreen({ navigation, route }) {
   console.log("PAYHERE FINAL URL:", url);
 
   try {
-    await Linking.openURL(url);
+    if (Platform.OS === "web") {
+      window.location.href = url;
+    } else {
+      await Linking.openURL(url);
+    }
   } catch (err) {
     console.log("PayHere open error:", err);
     showToast("Unable to open PayHere. Please try again or use a browser.");
