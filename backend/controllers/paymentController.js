@@ -26,14 +26,12 @@ exports.createPayHerePayment = async (req, res) => {
 
     const merchant_id = process.env.PAYHERE_MERCHANT_ID;
     const merchant_secret = process.env.PAYHERE_MERCHANT_SECRET;
-    const returnUrl = process.env.PAYHERE_RETURN_URL || "https://megashop.com/payment/success";
-    const cancelUrl = process.env.PAYHERE_CANCEL_URL || "https://megashop.com/payment/cancel";
-    const notifyUrl = process.env.PAYHERE_NOTIFY_URL || "https://megashop.com/payment/notify";
+    const returnUrl = process.env.PAYHERE_RETURN_URL || "https://megashop-mocha.vercel.app/payment/success";
+    const cancelUrl = process.env.PAYHERE_CANCEL_URL || "https://megashop-mocha.vercel.app/payment/cancel";
+    const notifyUrl = process.env.PAYHERE_NOTIFY_URL || "https://megashop-mocha.vercel.app/payment/notify";
 
     if (!merchant_id || !merchant_secret) {
-      return res.status(500).json({
-        message: "PayHere merchant credentials are not configured",
-      });
+      return res.status(500).json({ message: "PayHere merchant credentials are not configured" });
     }
 
     const amount = Number(order.total).toFixed(2); // ✅ exact total stored in DB
@@ -54,9 +52,40 @@ exports.createPayHerePayment = async (req, res) => {
       .digest("hex")
       .toUpperCase();
 
+    // 4️⃣ Use shipping_address from order when available
+    let shipping = {};
+    try {
+      shipping = order.shipping_address
+        ? typeof order.shipping_address === "string"
+          ? JSON.parse(order.shipping_address)
+          : order.shipping_address
+        : {};
+    } catch (e) {
+      shipping = {};
+    }
+
+    const firstName = shipping.name || order.customer_name || "Customer";
+    const email = shipping.email || order.email || "customer@email.com";
+    const phone = shipping.phone || order.phone || "0770000000";
+    const addr = shipping.address || order.address || "Sri Lanka";
+    const city = shipping.city || "Colombo";
+    const country = shipping.country || "Sri Lanka";
+
+    // Debug log to verify exact payload and hash
+    console.log("PAYHERE DEBUG:", {
+      merchant_id,
+      amount,
+      currency,
+      order_id: order.order_number,
+      hash,
+      returnUrl,
+      cancelUrl,
+      notifyUrl,
+    });
+
     // 4️⃣ Send all required fields to frontend
     res.json({
-      sandbox: "1", // PayHere sandbox mode
+      sandbox: true, // PayHere sandbox mode (boolean)
       merchant_id,
       return_url: returnUrl,
       cancel_url: cancelUrl,
@@ -67,14 +96,14 @@ exports.createPayHerePayment = async (req, res) => {
       currency,
       amount,
 
-      first_name: order.customer_name || "Customer",
+      first_name: firstName,
       last_name: "",
-      email: order.email || "customer@email.com",
-      phone: order.phone || "0770000000",
+      email,
+      phone,
 
-      address: order.address || "Sri Lanka",
-      city: "Colombo",
-      country: "Sri Lanka",
+      address: addr,
+      city,
+      country,
 
       hash,
     });
