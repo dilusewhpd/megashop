@@ -25,10 +25,7 @@ exports.createPayHerePayment = async (req, res) => {
     }
 
     const merchant_id = process.env.PAYHERE_MERCHANT_ID;
-    const merchant_secret_encoded = process.env.PAYHERE_MERCHANT_SECRET;
-    
-    // ✅ FIX: Decode Base64 merchant secret
-    const merchant_secret = Buffer.from(merchant_secret_encoded, 'base64').toString('utf-8');
+    const merchant_secret = process.env.PAYHERE_MERCHANT_SECRET;
 
     const normalizeUrl = (url) => (url || "").replace(/^http:/i, "https:");
 
@@ -61,16 +58,7 @@ exports.createPayHerePayment = async (req, res) => {
       crypto.createHash("md5").update(value).digest("hex").toUpperCase();
 
     const hashedSecret = md5(merchant_secret.trim());
-
     const orderId = String(order.order_number).trim();
-
-    console.log("FINAL PAYHERE CHECK:", {
-      merchant_id,
-      orderId,
-      amount,
-      currency,
-      secretLength: merchant_secret.length,
-    });
 
     const hash = md5(
       merchant_id + orderId + amount + currency + hashedSecret
@@ -156,13 +144,10 @@ exports.payHereNotify = async (req, res) => {
 
     const merchant_secret = process.env.PAYHERE_MERCHANT_SECRET;
 
-    // ✅ FIX: Decode Base64 merchant secret
-    const decodedSecret = Buffer.from(merchant_secret, 'base64').toString('utf-8');
-
     const md5 = (value) =>
       crypto.createHash("md5").update(value).digest("hex").toUpperCase();
 
-    const hashedSecret = md5(decodedSecret.trim());
+    const hashedSecret = md5(merchant_secret.trim());
 
     const localMd5 = md5(
       merchant_id +
