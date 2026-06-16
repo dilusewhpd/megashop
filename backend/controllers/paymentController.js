@@ -57,8 +57,6 @@ exports.createPayHerePayment = async (req, res) => {
     const md5 = (value) =>
       crypto.createHash("md5").update(value).digest("hex").toUpperCase();
 
-    const hashedSecret = md5(merchant_secret.trim());
-
     const orderId = String(order.order_number).trim();
 
     console.log("FINAL PAYHERE CHECK:", {
@@ -70,7 +68,7 @@ exports.createPayHerePayment = async (req, res) => {
     });
 
     const hash = md5(
-      merchant_id + orderId + amount + currency + hashedSecret
+      merchant_id + orderId + amount + currency + merchant_secret.trim()
     );
 
     // 4️⃣ Use shipping_address from order when available
@@ -156,15 +154,13 @@ exports.payHereNotify = async (req, res) => {
     const md5 = (value) =>
       crypto.createHash("md5").update(value).digest("hex").toUpperCase();
 
-    const hashedSecret = md5(merchant_secret.trim());
-
     const localMd5 = md5(
       merchant_id +
         order_id +
         payhere_amount +
         payhere_currency +
         status_code +
-        hashedSecret
+        merchant_secret.trim()
     );
 
     console.log("PAYHERE NOTIFY CHECK:", {
